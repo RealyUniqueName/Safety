@@ -1,5 +1,9 @@
 -cp src/hx
 -cp test
--main Main
 -debug
---macro Safety.register()
+Tests
+
+extraParams.hxml
+
+--macro Validator.register()
+-D SAFETY_SILENT

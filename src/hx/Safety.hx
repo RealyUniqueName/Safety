@@ -15,21 +15,23 @@ class Safety {
 			return;
 		}
 
+		var module:{run:Void->Void} = EvalContext.loadPlugin(getPluginPath());
+		module.run();
+	}
+
+	static public function getPluginPath():String {
 		var pos = Context.getPosInfos(PositionTools.here());
 		var srcDir = pos.file.directory().directory();
-		var pluginFile = Path.join([srcDir, 'ml', 'safety.cmxs']);
-
-		var module:{run:Void->Void} = EvalContext.loadPlugin(pluginFile);
-		module.run();
+		return Path.join([srcDir, 'ml', 'safety.cmxs']);
 	}
 #else
 
-	static public inline function safe<T>(value:Null<T>, defaultValue:T):T {
+	static public inline function or<T>(value:Null<T>, defaultValue:T):T {
 		return (value == null ? defaultValue : value);
 	}
 
 	static public inline function unsafe<T>(value:Null<T>):T {
-		return value;
+		return (value:T);
 	}
 #end
 }
