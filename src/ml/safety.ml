@@ -15,11 +15,14 @@ let accessed_field_name access =
 		| FEnum (_, { ef_name = name }) -> name
 
 (**
-	This class is used to recursively check typed expressions for null-safety
+	This is a base class is used to recursively check typed expressions for null-safety
 *)
-class null_checker com =
+class virtual base_checker com =
 	object (self)
-	method check e =
+	(** Entry point for checking a all expression in current type *)
+	method virtual check : unit
+	(** Recursively checks an expression *)
+	method private check_expr e =
 		match e.eexpr with
 			| TConst _ -> ()
 			| TLocal _ -> ()
@@ -33,13 +36,13 @@ class null_checker com =
 			| TObjectDecl _ -> ()
 			| TArrayDecl _ -> ()
 			| TCall (target, args) ->
-				self#check target;
-				List.iter self#check args
+				self#check_expr target;
+				List.iter self#check_expr args
 			| TNew _ -> ()
 			| TUnop _ -> ()
-			| TFunction fn -> self#check fn.tf_expr
+			| TFunction fn -> self#check_expr fn.tf_expr
 			| TVar _ -> ()
-			| TBlock exprs -> List.iter self#check exprs
+			| TBlock exprs -> List.iter self#check_expr exprs
 			| TFor _ -> ()
 			| TIf _ -> ()
 			| TWhile _ -> ()
@@ -56,15 +59,21 @@ class null_checker com =
 			| TIdent _ -> ()
 end
 
-let check_class com cls =
-	let check_field f =
-		Option.may (new null_checker com)#check f.cf_expr
-	in
-	List.iter check_field cls.cl_ordered_fields;
-	List.iter check_field cls.cl_ordered_statics;
-	match cls.cl_init with
-		| Some e -> (new null_checker com)#check e
-		| None -> ()
+class class_checker cls com =
+	object (self)
+		inherit base_checker com
+
+	(** Entry point for checking a class *)
+	method check =
+		let check_field f =
+			Option.may self#check_expr f.cf_expr
+		in
+		List.iter check_field cls.cl_ordered_fields;
+		List.iter check_field cls.cl_ordered_statics;
+		match cls.cl_init with
+			| Some e -> self#check_expr e
+			| None -> ()
+end
 
 let run = vfun0 (fun () ->
 	let com = (get_ctx()).curapi.get_com() in
@@ -72,9 +81,9 @@ let run = vfun0 (fun () ->
 		(* let t = macro_timer ctx ["safety plugin"] in *)
 		let rec traverse com_type =
 			match com_type with
-				| TClassDecl cls -> check_class com cls;
-				| TEnumDecl enm -> ();
-				| TTypeDecl typedef -> ();
+				| TClassDecl cls -> (new class_checker cls com)#check
+				| TEnumDecl enm -> ()
+				| TTypeDecl typedef -> ()
 				| TAbstractDecl abstr -> ()
 		in
 		List.iter traverse types;

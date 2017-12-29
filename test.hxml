@@ -1,0 +1,5 @@
+-cp src/hx
+-cp test
+-main Main
+-debug
+--macro Safety.register()
