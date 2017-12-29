@@ -11,7 +11,9 @@ type safety_error = {
 	se_pos : pos;
 }
 
-let errors:safety_error list ref = ref []
+type safety_context = {
+	mutable sc_errors : safety_error list;
+}
 
 let accessed_field_name access =
 	match access with
@@ -25,7 +27,7 @@ let accessed_field_name access =
 (**
 	This is a base class is used to recursively check typed expressions for null-safety
 *)
-class virtual base_checker com =
+class virtual base_checker ctx =
 	object (self)
 	(**
 		Entry point for checking a all expression in current type
@@ -35,7 +37,7 @@ class virtual base_checker com =
 		Register an error
 	*)
 	method error msg p =
-		errors := { se_msg = msg; se_pos = p; } :: !errors
+		ctx.sc_errors <- { se_msg = msg; se_pos = p; } :: ctx.sc_errors
 	(**
 		Recursively checks an expression
 	*)
@@ -80,9 +82,9 @@ class virtual base_checker com =
 			self#error ("Cannot access \"" ^ accessed_field_name access ^ "\" of a nullable value") target.epos
 end
 
-class class_checker cls com =
+class class_checker cls ctx =
 	object (self)
-		inherit base_checker com
+		inherit base_checker ctx
 	(**
 		Entry point for checking a class
 	*)
@@ -97,50 +99,54 @@ class class_checker cls com =
 			| None -> ()
 end
 
-let run = vfun0 (fun () ->
-	errors := [];
-	let com = (get_ctx()).curapi.get_com() in
-	add_typing_filter com (fun types ->
-		(* let t = macro_timer ctx ["safety plugin"] in *)
-		let rec traverse com_type =
-			match com_type with
-				| TClassDecl cls -> (new class_checker cls com)#check
-				| TEnumDecl enm -> ()
-				| TTypeDecl typedef -> ()
-				| TAbstractDecl abstr -> ()
+class plugin =
+	object (self)
+		val ctx = { sc_errors = [] }
+	(** Plugin API: this method should be executed at initialization macro time *)
+	method run () =
+		let com = (get_ctx()).curapi.get_com() in
+		add_typing_filter com (fun types ->
+			(* let t = macro_timer ctx ["safety plugin"] in *)
+			let rec traverse com_type =
+				match com_type with
+					| TClassDecl cls -> (new class_checker cls ctx)#check
+					| TEnumDecl enm -> ()
+					| TTypeDecl typedef -> ()
+					| TAbstractDecl abstr -> ()
+			in
+			List.iter traverse types;
+			if not (raw_defined com "SAFETY_SILENT") then
+				List.iter (fun err -> com.error err.se_msg err.se_pos) ctx.sc_errors;
+			(* t() *)
+		);
+		(* This is because of vfun0 should return something *)
+		vint32 (Int32.of_int 0)
+	(** Plugin API: returns a list of all errors found during safety checks *)
+	method get_errors () =
+		let arr = Array.make (List.length ctx.sc_errors) vnull in
+		let set_item idx msg p =
+			let obj = encode_obj_s
+				vnull
+				[
+					("msg", vstring (Rope.of_string msg));
+					("pos", encode_pos p)
+				]
+			in
+			Array.set arr idx obj
 		in
-		List.iter traverse types;
-		if not (raw_defined com "SAFETY_SILENT") then
-			List.iter (fun err -> com.error err.se_msg err.se_pos) !errors;
-		(* t() *)
-	);
-	(* This is because of vfun0 should return something *)
-	vint32 (Int32.of_int 0);
-)
-
-let get_errors = vfun0 (fun () ->
-	let arr = Array.make (List.length !errors) vnull in
-	let set_item idx msg p =
-		let obj = encode_obj_s
-			vnull
-			[
-				("msg", vstring (Rope.of_string msg));
-				("pos", encode_pos p)
-			]
+		let rec traverse idx errors =
+			match errors with
+				| err :: errors ->
+					set_item idx err.se_msg err.se_pos;
+					traverse (idx + 1) errors
+				| [] -> ()
 		in
-		Array.set arr idx obj
-	in
-	let rec traverse idx errors =
-		match errors with
-			| err :: errors ->
-				set_item idx err.se_msg err.se_pos;
-				traverse (idx + 1) errors
-			| [] -> ()
-	in
-	traverse 0 !errors;
-	(* VArray arr *)
-	VArray (EvalArray.create arr)
-)
+		traverse 0 ctx.sc_errors;
+		(* VArray arr *)
+		VArray (EvalArray.create arr)
+end
 ;;
 
-EvalStdLib.StdContext.register [("run", run); ("getErrors", get_errors)]
+let ctx = new plugin in
+
+EvalStdLib.StdContext.register [("run", vfun0 ctx#run); ("getErrors", vfun0 ctx#get_errors)]

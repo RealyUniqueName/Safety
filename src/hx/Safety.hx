@@ -1,22 +1,30 @@
 #if macro
 import haxe.macro.PositionTools;
 import haxe.macro.Context;
+import haxe.macro.Expr;
 import haxe.io.Path;
 import eval.vm.Context in EvalContext;
 
 using haxe.macro.PositionTools;
 using haxe.io.Path;
+
+private typedef PluginApi = {
+	/** This method should be executed at initialization macro time */
+	function run():Void;
+	/** Returns a list of all errors found during safety checks */
+	function getErrors():Array<{msg:String, pos:Position}>;
+}
 #end
 
 class Safety {
 #if macro
+	static public var plugin:PluginApi = EvalContext.loadPlugin(getPluginPath());
+
 	static public function register() {
 		if(haxe.macro.Context.defined('display')) {
 			return;
 		}
-
-		var module:{run:Void->Void} = EvalContext.loadPlugin(getPluginPath());
-		module.run();
+		plugin.run();
 	}
 
 	static public function getPluginPath():String {

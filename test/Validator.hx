@@ -14,10 +14,9 @@ class Validator {
 	}
 
 	static function validate(_) {
-		var module:{getErrors:Void->Array<{msg:String, pos:Position}>} = EvalContext.loadPlugin(Safety.getPluginPath());
-		var errors = module.getErrors();
-trace(errors);
-return;
+		var totalExpectedErrors = expectedErrors.length;
+		var errors = Safety.plugin.getErrors();
+
 		var i = 0;
 		while(i < errors.length) {
 			var error = errors[i];
@@ -44,6 +43,8 @@ return;
 		}
 		if(errors.length + expectedErrors.length > 0) {
 			Context.error('Tests failed. See warnings.', Context.currentPos());
+		} else {
+			Sys.println('Tests passed. $totalExpectedErrors expected errors spotted.');
 		}
 	}
 
@@ -56,6 +57,6 @@ return;
 
 	macro static public function shouldFail(expr:Expr):Expr {
 		expectedErrors.push({test:Context.getLocalMethod(), pos:expr.pos});
-		return macro trace($expr);
+		return expr;
 	}
 }

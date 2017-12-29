@@ -3,7 +3,7 @@
 -debug
 Tests
 
-extraParams.hxml
-
 --macro Validator.register()
 -D SAFETY_SILENT
+
+extraParams.hxml
