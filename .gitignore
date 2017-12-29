@@ -1,2 +1,2 @@
-safety.*
-!safety.ml
+src/ml/safety.*
+!src/ml/safety.ml
