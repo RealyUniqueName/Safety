@@ -47,7 +47,7 @@ class virtual base_checker ctx =
 			| TLocal _ -> ()
 			| TArray _ -> ()
 			| TBinop _ -> ()
-			| TField (target, access) -> self#check_field target access
+			| TField (target, access) -> self#check_field target access e.epos
 			| TTypeExpr _ -> ()
 			| TParenthesis _ -> ()
 			| TObjectDecl _ -> ()
@@ -77,9 +77,9 @@ class virtual base_checker ctx =
 	(**
 		Make sure nobody tries to access a field on a nullable value
 	*)
-	method private check_field target access =
+	method private check_field target access p =
 		if is_explicit_null target.etype then
-			self#error ("Cannot access \"" ^ accessed_field_name access ^ "\" of a nullable value") target.epos
+			self#error ("Cannot access \"" ^ accessed_field_name access ^ "\" of a nullable value.") p
 end
 
 class class_checker cls ctx =
@@ -102,7 +102,9 @@ end
 class plugin =
 	object (self)
 		val ctx = { sc_errors = [] }
-	(** Plugin API: this method should be executed at initialization macro time *)
+	(**
+		Plugin API: this method should be executed at initialization macro time
+	*)
 	method run () =
 		let com = (get_ctx()).curapi.get_com() in
 		add_typing_filter com (fun types ->
@@ -121,7 +123,9 @@ class plugin =
 		);
 		(* This is because of vfun0 should return something *)
 		vint32 (Int32.of_int 0)
-	(** Plugin API: returns a list of all errors found during safety checks *)
+	(**
+		Plugin API: returns a list of all errors found during safety checks
+	*)
 	method get_errors () =
 		let arr = Array.make (List.length ctx.sc_errors) vnull in
 		let set_item idx msg p =
