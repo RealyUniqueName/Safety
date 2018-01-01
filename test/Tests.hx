@@ -16,6 +16,15 @@ class Tests
 		a.length;
 	}
 
+	static function fieldAccess_onOptionalNullableValue_shouldFail(a:String = null, ?b:String):Void {
+		shouldFail(a.length);
+		shouldFail(b.length);
+	}
+
+	static function fieldAccess_onOptionalNonNullableValue_shouldPass(a:String = 'hello'):Void {
+		a.length;
+	}
+
 	static function call_onNullableValue_shouldFail() {
 		var fn:Null<Void->Void> = function() {}
 		shouldFail(fn());
@@ -33,8 +42,8 @@ class Tests
 	}
 
 	static function call_nullableValueToOptionalArgument_shouldPass() {
-		var fn = function(?a:String) {}
-		var v:Null<String> = 'hello';
+		var fn = function(?a:Int) {}
+		var v:Null<Int> = 1;
 		fn(v);
 	}
 
