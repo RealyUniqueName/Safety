@@ -9,6 +9,7 @@ class Validator {
 	static var expectedErrors:Array<{test:String, pos:Position}>;
 
 	static public function register() {
+		if(Context.defined('display')) return;
 		Context.onAfterTyping(validate);
 		expectedErrors = [];
 	}

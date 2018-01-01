@@ -52,9 +52,7 @@ class virtual base_checker ctx =
 			| TParenthesis _ -> ()
 			| TObjectDecl _ -> ()
 			| TArrayDecl _ -> ()
-			| TCall (target, args) ->
-				self#check_expr target;
-				List.iter self#check_expr args
+			| TCall (callee, args) -> self#check_call callee args
 			| TNew _ -> ()
 			| TUnop _ -> ()
 			| TFunction fn -> self#check_expr fn.tf_expr
@@ -80,6 +78,26 @@ class virtual base_checker ctx =
 	method private check_field target access p =
 		if is_explicit_null target.etype then
 			self#error ("Cannot access \"" ^ accessed_field_name access ^ "\" of a nullable value.") p
+	(**
+		Check calls: don't call a nullable value, dont' pass nulable values to non-nullable arguments
+	*)
+	method check_call callee args =
+		if is_explicit_null callee.etype then
+			self#error "Cannot call a nullable value." callee.epos;
+		self#check_expr callee;
+		List.iter self#check_expr args;
+		match follow callee.etype with
+			| TFun (types, _) ->
+				let rec traverse args types =
+					match (args, types) with
+						| (a :: args, (_, _, t) :: types) ->
+							if (is_explicit_null a.etype) && not (is_explicit_null t) then
+								self#error "Cannont pass nullable value to non-nullable argument." a.epos;
+							traverse args types
+						| _ -> ()
+				in
+				traverse args types
+			| _ -> ()
 end
 
 class class_checker cls ctx =
@@ -151,6 +169,6 @@ class plugin =
 end
 ;;
 
-let ctx = new plugin in
+let api = new plugin in
 
-EvalStdLib.StdContext.register [("run", vfun0 ctx#run); ("getErrors", vfun0 ctx#get_errors)]
+EvalStdLib.StdContext.register [("run", vfun0 api#run); ("getErrors", vfun0 api#get_errors)]
