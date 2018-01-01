@@ -5,6 +5,7 @@ open EvalEncode
 open Common
 open MacroApi
 open Type
+open Ast
 
 type safety_error = {
 	se_msg : string;
@@ -14,6 +15,29 @@ type safety_error = {
 type safety_context = {
 	mutable sc_errors : safety_error list;
 }
+
+(**
+	Check `e` is nullable even if its type is reported non-nullable.
+	Haxe type system lies sometimes.
+*)
+let rec is_nullable_expr e =
+	match e.eexpr with
+		| TConst TNull -> true
+		| TParenthesis e -> is_nullable_expr e
+		| TBlock exprs ->
+			(match exprs with
+				| [] -> false
+				| _ -> is_nullable_expr (List.hd (List.rev exprs))
+			)
+		| TIf (condition, if_body, else_body) ->
+			if is_nullable_expr if_body then
+				true
+			else
+				(match else_body with
+					| None -> false
+					| Some else_body -> is_nullable_expr else_body
+				)
+		| _ -> is_explicit_null e.etype
 
 let accessed_field_name access =
 	match access with
@@ -46,17 +70,18 @@ class virtual base_checker ctx =
 			| TConst _ -> ()
 			| TLocal _ -> ()
 			| TArray _ -> ()
-			| TBinop _ -> ()
+			| TBinop (op, left_expr, right_expr) -> self#check_binop op left_expr right_expr e.epos
 			| TField (target, access) -> self#check_field target access e.epos
 			| TTypeExpr _ -> ()
-			| TParenthesis _ -> ()
+			| TParenthesis e -> self#check_expr e
 			| TObjectDecl _ -> ()
 			| TArrayDecl _ -> ()
 			| TCall (callee, args) -> self#check_call callee args
 			| TNew _ -> ()
-			| TUnop _ -> ()
+			| TUnop (_, _, expr) -> self#check_unop expr e.epos
 			| TFunction fn -> self#check_expr fn.tf_expr
-			| TVar _ -> ()
+			| TVar (v, Some init_expr) -> self#check_var v init_expr e.epos
+			| TVar (_, None) -> ()
 			| TBlock exprs -> List.iter self#check_expr exprs
 			| TFor _ -> ()
 			| TIf _ -> ()
@@ -73,16 +98,44 @@ class virtual base_checker ctx =
 			| TEnumIndex _ -> ()
 			| TIdent _ -> ()
 	(**
+		Don't perform unsafe binary operations
+	*)
+	method private check_binop op left_expr right_expr p =
+		(match op with
+			| OpAssign ->
+				if not (is_nullable_expr left_expr) && is_nullable_expr right_expr then
+					self#error "Cannot assign nullable value to non-nullable acceptor." p
+			| _->
+				if is_nullable_expr left_expr || is_nullable_expr right_expr then
+					self#error "Cannot perform binary operation on nullable value." p
+		);
+		self#check_expr left_expr;
+		self#check_expr right_expr
+	(**
+		Don't perform unops on nullable values
+	*)
+	method private check_unop e p =
+		if is_nullable_expr e then
+			self#error "Cannot execute unary operation on nullable value." p;
+		self#check_expr e
+	(**
+		Don't assign nullable value to non-nullable variable on var declaration
+	*)
+	method private check_var v e p =
+		if is_nullable_expr e && not (is_explicit_null v.v_type) then
+			self#error "Cannot assign nullable value to non-nullable variable." p;
+		self#check_expr e
+	(**
 		Make sure nobody tries to access a field on a nullable value
 	*)
 	method private check_field target access p =
-		if is_explicit_null target.etype then
+		if is_nullable_expr target then
 			self#error ("Cannot access \"" ^ accessed_field_name access ^ "\" of a nullable value.") p
 	(**
 		Check calls: don't call a nullable value, dont' pass nulable values to non-nullable arguments
 	*)
 	method check_call callee args =
-		if is_explicit_null callee.etype then
+		if is_nullable_expr callee then
 			self#error "Cannot call a nullable value." callee.epos;
 		self#check_expr callee;
 		List.iter self#check_expr args;
@@ -91,7 +144,7 @@ class virtual base_checker ctx =
 				let rec traverse args types =
 					match (args, types) with
 						| (a :: args, (_, _, t) :: types) ->
-							if (is_explicit_null a.etype) && not (is_explicit_null t) then
+							if (is_nullable_expr a) && not (is_explicit_null t) then
 								self#error "Cannont pass nullable value to non-nullable argument." a.epos;
 							traverse args types
 						| _ -> ()

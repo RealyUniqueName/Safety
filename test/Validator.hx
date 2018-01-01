@@ -40,7 +40,7 @@ class Validator {
 			Context.warning(error.msg, error.pos);
 		}
 		for(expected in expectedErrors) {
-			Context.warning('Expression did not fail as expected in "${expected.test}" test.', expected.pos);
+			Context.warning('Expression was expected to fail, but it did not fail in "${expected.test}" test.', expected.pos);
 		}
 		if(errors.length + expectedErrors.length > 0) {
 			Context.error('Tests failed. See warnings.', Context.currentPos());

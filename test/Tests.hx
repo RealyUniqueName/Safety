@@ -47,4 +47,39 @@ class Tests
 		fn(v);
 	}
 
+	static function varDecl_assignNullableValueToNonNullableVar_shouldFail() {
+		var v:Null<String> = 'hello';
+		shouldFail(var s:String = v);
+		shouldFail(var s:String = null);
+	}
+
+	static function assign_nullableValueToNonNullable_shouldFail() {
+		var a:Null<Int> = 0;
+		var b = 10;
+		shouldFail(b = a);
+	}
+
+	static function assign_nonNullableValueToNullable_shouldPass() {
+		var a:Null<Int> = null;
+		var b = 10;
+		a = b;
+	}
+
+	static function binop_withNullableValue_shouldFail() {
+		var a:Null<Int> = 0;
+		var b = 10;
+		shouldFail(a + b);
+	}
+
+	static function unop_nullableValue_shouldFail() {
+		var a:Null<Int> = 0;
+		shouldFail(a++);
+	}
+
+	static function ternary_nullableElse_assignToNonNullableValue_shouldFail() {
+		var v:Null<String> = 'a';
+		var a:String;
+		shouldFail((true ? 'hello' : v).length);
+	}
+
 }
