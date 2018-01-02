@@ -69,7 +69,7 @@ class virtual base_checker ctx =
 		match e.eexpr with
 			| TConst _ -> ()
 			| TLocal _ -> ()
-			| TArray _ -> ()
+			| TArray (arr, idx) -> self#check_array_access arr idx e.epos
 			| TBinop (op, left_expr, right_expr) -> self#check_binop op left_expr right_expr e.epos
 			| TField (target, access) -> self#check_field target access e.epos
 			| TTypeExpr _ -> ()
@@ -97,6 +97,16 @@ class virtual base_checker ctx =
 			| TEnumParameter _ -> ()
 			| TEnumIndex _ -> ()
 			| TIdent _ -> ()
+	(**
+		Check array access on nullable values or using nullable indexes
+	*)
+	method private check_array_access arr idx p =
+		if is_nullable_expr arr then
+			self#error "Cannot perform array access on nullable value." p;
+		if is_nullable_expr idx then
+			self#error "Cannot use nullable value as an index for array access." p;
+		self#check_expr arr;
+		self#check_expr idx
 	(**
 		Don't perform unsafe binary operations
 	*)
@@ -163,11 +173,10 @@ class class_checker cls ctx =
 		let check_field f =
 			Option.may self#check_expr f.cf_expr
 		in
+		Option.may self#check_expr cls.cl_init;
+		Option.may (fun field -> Option.may self#check_expr field.cf_expr) cls.cl_constructor;
 		List.iter check_field cls.cl_ordered_fields;
 		List.iter check_field cls.cl_ordered_statics;
-		match cls.cl_init with
-			| Some e -> self#check_expr e
-			| None -> ()
 end
 
 class plugin =
@@ -182,10 +191,11 @@ class plugin =
 			(* let t = macro_timer ctx ["safety plugin"] in *)
 			let rec traverse com_type =
 				match com_type with
-					| TClassDecl cls -> (new class_checker cls ctx)#check
 					| TEnumDecl enm -> ()
 					| TTypeDecl typedef -> ()
 					| TAbstractDecl abstr -> ()
+					| TClassDecl { cl_path = ([], "Safety") } -> () (* Skip our own code *)
+					| TClassDecl cls -> (new class_checker cls ctx)#check
 			in
 			List.iter traverse types;
 			if not (raw_defined com "SAFETY_SILENT") then

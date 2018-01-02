@@ -6,6 +6,22 @@ using Safety;
 
 class Tests
 {
+	/**
+	 *  Null safety should work in __init__ functions
+	 */
+	static function __init__() {
+		var s:Null<String> = 'hello';
+		shouldFail(s.length);
+	}
+
+	/**
+	 *  Null safety should work in constructors
+	 */
+	function new() {
+		var s:Null<String> = 'hello';
+		shouldFail(s.length);
+	}
+
 	static function fieldAccess_onNullableValue_shouldFail():Void {
 		var a:Null<String> = "hello";
 		shouldFail(a.length);
@@ -82,4 +98,21 @@ class Tests
 		shouldFail((true ? 'hello' : v).length);
 	}
 
+
+	static function arrayAccess_nullableArray_shouldFail() {
+		var a:Null<Array<Int>> = [];
+		shouldFail(a[0]);
+	}
+
+	static function arrayAccess_usingNullableIndex_shouldFail() {
+		var a = [0];
+		var idx:Null<Int> = 0;
+		shouldFail(a[idx]);
+	}
+
+	// TODO
+	// static function arrayAccess_fieldOnNullableValue_shouldFail() {
+	// 	var a:Array<Null<String>> = [];
+	// 	shouldFail(a[0].length);
+	// }
 }
