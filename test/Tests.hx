@@ -88,6 +88,13 @@ class Tests
 		shouldFail(a + b);
 	}
 
+	static function binop_comparisonWithNullableValue_shouldPass() {
+		var a:Null<Int> = 0;
+		var b = 10;
+		a == b;
+		a != b;
+	}
+
 	static function unop_nullableValue_shouldFail() {
 		var a:Null<Int> = 0;
 		shouldFail(a++);
@@ -168,4 +175,33 @@ class Tests
 			shouldFail(s = nullable);
 		}
 	}
+
+	// static function switch_onNullableValue() {
+	// 	var nullable:Null<String> = 'hello';
+	// 	var s:String;
+	// 	switch(nullable) {
+	// 		case v if(nullable == 'rnd'):
+	// 			shouldFail(s = v);
+	// 			shouldFail(s = nullable);
+	// 		case
+	// 	}
+	// }
+
+	// static function switch_checkedAgainstNullInGuard() {
+	// 	var nullable:Null<String> = 'hello';
+	// 	var s:String;
+	// 	switch('world') {
+	// 		case v if(nullable == 'rnd'):
+	// 			shouldFail(s = v);
+	// 			shouldFail(s = nullable);
+	// 		case v if(nullable != null):
+	// 			shouldFail(s = v);
+	// 			s = nullable;
+	// 		case null:
+	// 			shouldFail(s = nullable);
+	// 		case v if(nullable == 'rnd'):
+	// 			s = v;
+	// 		case v
+	// 	}
+	// }
 }

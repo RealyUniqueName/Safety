@@ -237,6 +237,7 @@ class virtual base_checker ctx =
 				| OpAssign ->
 					if not (self#is_nullable_expr left_expr) && self#is_nullable_expr right_expr then
 						self#error "Cannot assign nullable value to non-nullable acceptor." p
+				| OpEq | OpNotEq -> ()
 				| _->
 					if self#is_nullable_expr left_expr || self#is_nullable_expr right_expr then
 						self#error "Cannot perform binary operation on nullable value." p
