@@ -58,28 +58,6 @@ let rec is_nullable_type t =
 			false
 
 (**
-	Collect nullable local vars which are checked against `null`.
-	Returns a tuple of (vars_checked_to_be_null * vars_checked_to_be_not_null) in case `condition` evaluates to `true`.
-*)
-let process_condition condition =
-	let nulls = ref []
-	and not_nulls = ref [] in
-	let rec traverse e =
-		match e.eexpr with
-			| TBinop (OpEq, { eexpr = TConst TNull }, { eexpr = TLocal v }) -> nulls := v :: !nulls
-			| TBinop (OpEq, { eexpr = TLocal v }, { eexpr = TConst TNull }) -> nulls := v :: !nulls
-			| TBinop (OpNotEq, { eexpr = TConst TNull }, { eexpr = TLocal v }) -> not_nulls := v :: !not_nulls
-			| TBinop (OpNotEq, { eexpr = TLocal v }, { eexpr = TConst TNull }) -> not_nulls := v :: !not_nulls
-			| TBinop (OpBoolAnd, left_expr, right_expr) ->
-				traverse left_expr;
-				traverse right_expr;
-			| TParenthesis e -> traverse e
-			| _ -> ()
-	in
-	traverse condition;
-	(!nulls, !not_nulls)
-
-(**
 	Class to simplify collecting lists of local vars checked against `null`.
 *)
 class local_vars =
@@ -94,31 +72,52 @@ class local_vars =
 			Hashtbl.mem safe_locals local_var.v_id
 			|| not (is_nullable_type local_var.v_type)
 		(**
-			Clear collected data
-		*)
-		method clear =
-			Hashtbl.clear safe_locals
-		(**
 			This method should be called upon passing `if`.
-			It collects locals checked against `null` and executes blocks of `if` and `else` with proper statuses of locals.
+			It collects locals checked against `null` and executes `callback` for expressions with proper statuses of locals.
 		*)
-		method process_if expr (if_callback:texpr->unit) (else_callback:texpr->unit) =
+		method process_if expr (callback:texpr->unit) =
 			match expr.eexpr with
 				| TIf (condition, if_body, else_body) ->
-					let (nulls, not_nulls) = process_condition condition in
+					let (nulls, not_nulls) = self#process_condition condition callback in
 					(** execute `if_body` with known not-null variables *)
 					self#add_to_safety not_nulls;
-					if_callback if_body;
+					callback if_body;
 					self#remove_from_safety not_nulls;
 					(** execute `else_body` with known not-null variables *)
 					(match else_body with
 						| None -> ()
 						| Some else_body ->
 							self#add_to_safety nulls;
-							else_callback else_body;
+							callback else_body;
 							self#remove_from_safety nulls
 					)
 				| _ -> fail ~msg:"Expected TIf" expr.epos __POS__
+		(**
+			Collect nullable local vars which are checked against `null`.
+			Returns a tuple of (vars_checked_to_be_null * vars_checked_to_be_not_null) in case `condition` evaluates to `true`.
+		*)
+		method process_condition condition (callback:texpr->unit) =
+			let nulls = ref []
+			and not_nulls = ref [] in
+			let checked_and_safe v =
+				self#add_to_safety [v];
+				not_nulls := v :: !not_nulls
+			in
+			let rec traverse e =
+				match e.eexpr with
+					| TBinop (OpEq, { eexpr = TConst TNull }, { eexpr = TLocal v }) -> nulls := v :: !nulls
+					| TBinop (OpEq, { eexpr = TLocal v }, { eexpr = TConst TNull }) -> nulls := v :: !nulls
+					| TBinop (OpNotEq, { eexpr = TConst TNull }, { eexpr = TLocal v }) -> checked_and_safe v
+					| TBinop (OpNotEq, { eexpr = TLocal v }, { eexpr = TConst TNull }) -> checked_and_safe v
+					| TBinop (OpBoolAnd, left_expr, right_expr) ->
+						traverse left_expr;
+						traverse right_expr;
+					| TParenthesis e -> traverse e
+					| _ -> callback e
+			in
+			traverse condition;
+			self#remove_from_safety !not_nulls;
+			(!nulls, !not_nulls)
 		(**
 			Add variables to the list of safe locals.
 		*)
@@ -171,16 +170,8 @@ class virtual base_checker ctx =
 				| TIf _ ->
 					let nullable = ref false in
 					let check body = nullable := !nullable || self#is_nullable_expr body in
-					local_safety#process_if e check check;
+					local_safety#process_if e check;
 					!nullable
-				(* | TIf (condition, if_body, else_body) ->
-					if self#is_nullable_expr if_body then
-						true
-					else
-						(match else_body with
-							| None -> false
-							| Some else_body -> self#is_nullable_expr else_body
-						) *)
 				| _ -> is_nullable_type e.etype
 		(**
 			Recursively checks an expression
@@ -206,7 +197,7 @@ class virtual base_checker ctx =
 				| TBlock exprs -> List.iter self#check_expr exprs
 				| TFor _ -> ()
 				| TIf _ ->
-					local_safety#process_if e self#check_expr self#check_expr
+					local_safety#process_if e self#check_expr
 				| TWhile _ -> ()
 				| TSwitch _ -> ()
 				| TTry _ -> ()

@@ -27,6 +27,11 @@ class Tests
 		shouldFail(a.length);
 	}
 
+	static function fieldAccess_onNullableValueInIfCondition_shouldFail():Void {
+		var a:Null<String> = "hello";
+		shouldFail(if(a.length == 0) {});
+	}
+
 	static function fieldAccess_onNotNullableValue_shouldPass():Void {
 		var a:String = "hello";
 		a.length;
@@ -155,6 +160,12 @@ class Tests
 		}
 	}
 
+	// static function checkAgainstNull_checkAndFieldAccess_shouldPass(?a:String) {
+	// 	var s:Null<String> = 'hello';
+	// 	if(s != null && s.length == 0) {}
+	// 	s != null && s.length == 0;
+	// }
+
 	static function checkAgainstNull_complexConditions() {
 		var nullable:Null<String> = 'hello';
 		var s:String;
@@ -180,10 +191,17 @@ class Tests
 	// 	var nullable:Null<String> = 'hello';
 	// 	var s:String;
 	// 	switch(nullable) {
-	// 		case v if(nullable == 'rnd'):
+	// 		case v if(Std.random(2) == 1):
 	// 			shouldFail(s = v);
 	// 			shouldFail(s = nullable);
-	// 		case
+	// 		case null:
+	// 			shouldFail(s = nullable);
+	// 		case v if(Std.random(2) == 1):
+	// 			s = v;
+	// 			s = nullable;
+	// 		case v:
+	// 			s = v;
+	// 			s = nullable;
 	// 	}
 	// }
 
