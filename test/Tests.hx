@@ -176,6 +176,15 @@ class Tests
 		shouldFail(if(s == null && s.length == 0) {});
 		shouldFail(s != null || s.length == 0);
 		shouldFail(s == null && s.length == 0);
+
+		//checked against not-nullable value, so it's not null
+		var nullable:Null<String> = 'hello';
+		var s = 'world';
+		if(nullable == s) {
+			s = nullable;
+		} else {
+			shouldFail(s = nullable);
+		}
 	}
 
 	static function checkAgainstNull_complexConditions() {

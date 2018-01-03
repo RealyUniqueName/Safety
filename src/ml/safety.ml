@@ -61,7 +61,7 @@ let rec is_nullable_type t =
 	Collect nullable local vars which are checked against `null`.
 	Returns a tuple of (vars_checked_to_be_null * vars_checked_to_be_not_null) in case `condition` evaluates to `true`.
 *)
-let process_condition condition (callback:texpr->unit) =
+let process_condition condition (is_nullable_expr:texpr->bool) callback =
 	let nulls = ref []
 	and not_nulls = ref [] in
 	let rec traverse e =
@@ -70,6 +70,8 @@ let process_condition condition (callback:texpr->unit) =
 			| TBinop (OpEq, { eexpr = TLocal v }, { eexpr = TConst TNull }) -> nulls := v :: !nulls
 			| TBinop (OpNotEq, { eexpr = TConst TNull }, { eexpr = TLocal v }) -> not_nulls := v :: !not_nulls
 			| TBinop (OpNotEq, { eexpr = TLocal v }, { eexpr = TConst TNull }) -> not_nulls := v :: !not_nulls
+			| TBinop (OpEq, e, { eexpr = TLocal v }) when not (is_nullable_expr e) -> not_nulls := v :: !not_nulls
+			| TBinop (OpEq, { eexpr = TLocal v }, e) when not (is_nullable_expr e) -> not_nulls := v :: !not_nulls
 			| TBinop (OpBoolAnd, left_expr, right_expr) ->
 				traverse left_expr;
 				traverse right_expr;
@@ -124,11 +126,11 @@ class local_vars =
 			This method should be called upon passing `if`.
 			It collects locals which are checked against `null` and executes callbacks for expressions with proper statuses of locals.
 		*)
-		method process_if expr (condition_callback:texpr->unit) (body_callback:texpr->unit) =
+		method process_if expr is_nullable_expr (condition_callback:texpr->unit) (body_callback:texpr->unit) =
 			match expr.eexpr with
 				| TIf (condition, if_body, else_body) ->
 					condition_callback condition;
-					let (nulls, not_nulls) = process_condition condition (fun _ -> ()) in
+					let (nulls, not_nulls) = process_condition condition is_nullable_expr (fun _ -> ()) in
 					(** execute `if_body` with known not-null variables *)
 					self#add_to_safety not_nulls;
 					body_callback if_body;
@@ -145,16 +147,16 @@ class local_vars =
 		(**
 			Handle boolean AND outside of `if` condition.
 		*)
-		method process_and left_expr right_expr (callback:texpr->unit) =
-			let (_, not_nulls) = process_condition left_expr callback in
+		method process_and left_expr right_expr is_nullable_expr (callback:texpr->unit) =
+			let (_, not_nulls) = process_condition left_expr is_nullable_expr callback in
 			self#add_to_safety not_nulls;
 			callback right_expr;
 			self#remove_from_safety not_nulls
 		(**
 			Handle boolean OR outside of `if` condition.
 		*)
-		method process_or left_expr right_expr (callback:texpr->unit) =
-			let (nulls, _) = process_condition left_expr callback in
+		method process_or left_expr right_expr is_nullable_expr (callback:texpr->unit) =
+			let (nulls, _) = process_condition left_expr is_nullable_expr callback in
 			self#add_to_safety nulls;
 			callback right_expr;
 			self#remove_from_safety nulls
@@ -214,7 +216,7 @@ class virtual base_checker ctx =
 				| TIf _ ->
 					let nullable = ref false in
 					let check body = nullable := !nullable || self#is_nullable_expr body in
-					local_safety#process_if e (fun _ -> ()) check;
+					local_safety#process_if e self#is_nullable_expr (fun _ -> ()) check;
 					!nullable
 				| _ -> is_nullable_type e.etype
 		(**
@@ -279,7 +281,7 @@ class virtual base_checker ctx =
 					self#error "Cannot use nullable value as condition in \"if\"." e.epos;
 				self#check_expr e
 			in
-			local_safety#process_if e check_condition self#check_expr
+			local_safety#process_if e self#is_nullable_expr check_condition self#check_expr
 		(**
 			Check array access on nullable values or using nullable indexes
 		*)
@@ -301,9 +303,9 @@ class virtual base_checker ctx =
 			match op with
 				| OpEq | OpNotEq -> check_both()
 				| OpBoolAnd ->
-					local_safety#process_and left_expr right_expr self#check_expr
+					local_safety#process_and left_expr right_expr self#is_nullable_expr self#check_expr
 				| OpBoolOr ->
-					local_safety#process_or left_expr right_expr self#check_expr
+					local_safety#process_or left_expr right_expr self#is_nullable_expr self#check_expr
 				| OpAssign ->
 					if not (self#is_nullable_expr left_expr) && self#is_nullable_expr right_expr then
 						self#error "Cannot assign nullable value to not-nullable acceptor." p;
