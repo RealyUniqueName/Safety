@@ -17,7 +17,6 @@ class Validator {
 	static function validate(_) {
 		var totalExpectedErrors = expectedErrors.length;
 		var errors = Safety.plugin.getErrors();
-
 		var i = 0;
 		while(i < errors.length) {
 			var error = errors[i];
@@ -43,7 +42,9 @@ class Validator {
 			Context.warning('Expression was expected to fail, but it did not fail in "${expected.method}".', expected.pos);
 		}
 		if(errors.length + expectedErrors.length > 0) {
-			Context.error('Tests failed. See warnings.', Context.currentPos());
+			if(!Context.defined('VALIDATOR_DONT_FAIL')) {
+				Context.error('Tests failed. See warnings.', Context.currentPos());
+			}
 		} else {
 			Sys.println('Tests passed. $totalExpectedErrors expected errors spotted.');
 		}

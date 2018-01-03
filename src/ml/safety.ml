@@ -80,6 +80,33 @@ let process_condition condition (callback:texpr->unit) =
 	(!nulls, !not_nulls)
 
 (**
+	Check if specified `path` is mentioned in `-D SAFETY=here`
+*)
+let need_check com path =
+	try
+		let rec find str lst =
+			match lst with
+				| [] -> false
+				| ["ALL"] -> true
+				| current :: rest ->
+					let contains =
+						(String.length str >= String.length current)
+						&& (current = String.sub str 0 (String.length current))
+					in
+					if contains then
+						true
+					else
+						find str rest;
+		and check_list = Str.split (Str.regexp ",") (String.trim (raw_defined_value com "SAFETY"))
+		and str =
+			match path with
+				| ([], name) -> name
+				| (packages, name) -> (String.concat "." packages) ^ "." ^ name
+		in
+		find str check_list
+	with Not_found -> false
+
+(**
 	Class to simplify collecting lists of local vars checked against `null`.
 *)
 class local_vars =
@@ -215,17 +242,34 @@ class virtual base_checker ctx =
 				| TFor _ -> ()
 				| TIf _ -> self#check_if e
 				| TWhile _ -> ()
-				| TSwitch _ -> ()
+				| TSwitch (target, cases, default) -> self#check_switch target cases default
 				| TTry _ -> ()
 				| TReturn _ -> ()
 				| TBreak -> ()
 				| TContinue -> ()
 				| TThrow _ -> ()
 				| TCast _ -> ()
-				| TMeta _ -> ()
+				| TMeta (_, e) -> self#check_expr e
 				| TEnumParameter _ -> ()
 				| TEnumIndex _ -> ()
 				| TIdent _ -> ()
+		(**
+			Check safety in `switch` expressions.
+		*)
+		method private check_switch target cases default =
+			if self#is_nullable_expr target then
+				self#error "Cannot switch on nullable value." target.epos;
+			let rec traverse_cases cases =
+				match cases with
+					| [] -> ()
+					| (_, body) :: rest ->
+						self#check_expr body;
+						traverse_cases rest
+			in
+			traverse_cases cases;
+			match default with
+				| None -> ()
+				| Some e -> self#check_expr e
 		(**
 			Check safety in `if` expressions
 		*)
@@ -352,7 +396,7 @@ class plugin =
 						| TEnumDecl enm -> ()
 						| TTypeDecl typedef -> ()
 						| TAbstractDecl abstr -> ()
-						| TClassDecl { cl_path = ([], "Safety") } -> () (* Skip our own code *)
+						| TClassDecl { cl_path = path } when not (need_check com path) -> ()
 						| TClassDecl cls -> (new class_checker cls ctx)#check
 				in
 				List.iter traverse types;

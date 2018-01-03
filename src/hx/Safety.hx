@@ -45,9 +45,9 @@ class Safety {
 	 *  Returns `value` if it is not `null`. Otherwise throws an exception.
 	 *  @throws NullException if `value` is `null`.
 	 */
-	// static public inline function safe<T>(value:Null<T>):T {
-	// 	return (value == null ? throw new safety.NullException() : value);
-	// }
+	static public inline function safe<T>(value:Null<T>):T {
+		return (value == null ? throw new safety.NullException() : value);
+	}
 
 	/**
 	 *  Always returns `value`, but typed as non-nullable. Use at your own risk.

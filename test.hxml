@@ -5,6 +5,8 @@
 Tests
 
 --macro Validator.register()
+# -D VALIDATOR_DONT_FAIL
 -D SAFETY_SILENT
+-D SAFETY=Tests
 
 extraParams.hxml

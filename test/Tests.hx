@@ -199,22 +199,33 @@ class Tests
 		}
 	}
 
-	// static function switch_onNullableValue() {
+	// TODO far far future
+	// static function checkAgainstNull_assignCheckedValueToVarWithoutExplicitType_shouldTypeAsNotNullable() {
 	// 	var nullable:Null<String> = 'hello';
-	// 	var s:String;
-	// 	switch(nullable) {
-	// 		case v if(Std.random(2) == 1):
-	// 			shouldFail(s = v);
-	// 			shouldFail(s = nullable);
-	// 		case null:
-	// 			shouldFail(s = nullable);
-	// 		case v if(Std.random(2) == 1):
-	// 			s = v;
-	// 			s = nullable;
-	// 		case v:
-	// 			s = v;
-	// 			s = nullable;
-	// 	}
+	// 	var v = nullable != null ? nullable : 'world';
+	// 	var s:String = v;
+	// }
+
+	// static function switch_onNullableValue_shouldFail() {
+	// 	var nullable:Null<String> = 'hello';
+
+	// 	shouldFail(switch(nullable) {
+	// 		case _:
+	// 	});
+
+	// 	// switch(nullable) {
+	// 	// 	case v if(Std.random(2) == 1):
+	// 	// 		shouldFail(s = v);
+	// 	// 		shouldFail(s = nullable);
+	// 	// 	case null:
+	// 	// 		shouldFail(s = nullable);
+	// 	// 	case v if(Std.random(2) == 1):
+	// 	// 		s = v;
+	// 	// 		s = nullable;
+	// 	// 	case v:
+	// 	// 		s = v;
+	// 	// 		s = nullable;
+	// 	// }
 	// }
 
 	// static function switch_checkedAgainstNullInGuard() {
