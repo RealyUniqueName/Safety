@@ -16,6 +16,19 @@ type safety_context = {
 	mutable sc_errors : safety_error list;
 }
 
+(* Determines if we have a Null<T>. Unlike is_null, this returns true even if the wrapped type is nullable itself. *)
+let rec is_explicit_null = function
+	| TMono r ->
+		(match !r with None -> false | Some t -> is_explicit_null t)
+	| TAbstract ({ a_path = ([],"Null") },[t]) ->
+		true
+	| TLazy f ->
+		is_null (lazy_type f)
+	| TType (t,tl) ->
+		is_null (apply_params t.t_params tl t.t_type)
+	| _ ->
+		false
+
 (**
 	Check `e` is nullable even if its type is reported non-nullable.
 	Haxe type system lies sometimes.
@@ -183,7 +196,7 @@ class class_checker cls ctx =
 			Option.may self#check_expr f.cf_expr
 		in
 		Option.may self#check_expr cls.cl_init;
-		Option.may (fun field -> Option.may self#check_expr field.cf_expr) cls.cl_constructor;
+		(* Option.may (fun field -> Option.may self#check_expr field.cf_expr) cls.cl_constructor; *)
 		List.iter check_field cls.cl_ordered_fields;
 		List.iter check_field cls.cl_ordered_statics;
 end

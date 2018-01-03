@@ -17,7 +17,7 @@ class Tests
 	/**
 	 *  Null safety should work in constructors
 	 */
-	function new() {
+	function new(a:String) {
 		var s:Null<String> = 'hello';
 		shouldFail(s.length);
 	}
@@ -55,7 +55,7 @@ class Tests
 		var fn = function(a:String) {}
 		var v:Null<String> = 'hello';
 		shouldFail(fn(v));
-		// shouldFail(new Tests(v));
+		shouldFail(new Tests(v));
 	}
 
 	static function call_nullableValueToOptionalArgument_shouldPass() {
@@ -111,20 +111,17 @@ class Tests
 		shouldFail(a[idx]);
 	}
 
-	// TODO
-	// static function typeInference_arrayAccess_fieldOnNullableItem_shouldFail() {
-	// 	var a:Array<Null<String>> = [];
-	// 	shouldFail(a[0].length);
-	// }
+	static function typeInference_arrayAccess_fieldOnNullableItem_shouldFail() {
+		var a:Array<Null<String>> = [];
+		shouldFail(a[0].length);
+	}
 
-	// static function typeInference_fieldAccessOnInferredNullableType_shouldFail() {
-	// 	var nullable:Null<String> = 'hello';
-	// 	var s = nullable;
-	// 	shouldFail(s.length);
-	// }
+	static function typeInference_assignNullableValueToVariableWithoutExplicitTyping_shouldPass(nullable:Null<String>) {
+		var s = nullable;
+	}
 
-	// static function typeInference_assignNullableValueToVariableWithoutExplicitTyping_shouldPass() {
-	// 	var nullable:Null<String> = 'hello';
-	// 	var s = nullable;
-	// }
+	static function typeInference_fieldAccessOnInferredNullableType_shouldFail(nullable:Null<String>) {
+		var s = nullable;
+		shouldFail(s.length);
+	}
 }
