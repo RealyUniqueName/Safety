@@ -148,23 +148,24 @@ class Tests
 		}
 	}
 
-	// static function checkAgainstNull_complexConditions() {
-	// 	var nullable:Null<String> = 'hello';
-	// 	var s:String;
-	// 	if(nullable != null && true) {
-	// 		s = nullable;
-	// 	} else {
-	// 		shouldFail(s = nullable);
-	// 	}
-	// 	if(false && (true || false) && null == nullable) {
-	// 		shouldFail(s = nullable);
-	// 	} else {
-	// 		s = nullable;
-	// 	}
-	// 	if(true || nullable != null) {
-	// 		shouldFail(s = nullable);
-	// 	} else {
-	// 		shouldFail(s = nullable);
-	// 	}
-	// }
+	static function checkAgainstNull_complexConditions() {
+		var nullable:Null<String> = 'hello';
+		var s:String;
+		if(nullable != null && true) {
+			s = nullable;
+		}
+		else {
+			shouldFail(s = nullable);
+		}
+		if(false && (true || false) && null == nullable) {
+			shouldFail(s = nullable);
+		} else {
+			s = nullable;
+		}
+		if(true || nullable != null) {
+			shouldFail(s = nullable);
+		} else {
+			shouldFail(s = nullable);
+		}
+	}
 }

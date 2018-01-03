@@ -4,8 +4,8 @@ open EvalContext
 open EvalEncode
 open Common
 open MacroApi
-open Type
 open Ast
+open Type
 open Globals
 
 type safety_error = {
@@ -63,21 +63,18 @@ let rec is_nullable_type t =
 *)
 let process_condition condition =
 	let nulls = ref []
-	and not_nulls = ref []
-	and spotted_or = ref false in
+	and not_nulls = ref [] in
 	let rec traverse e =
-		if not !spotted_or then
-			match e.eexpr with
-				| TBinop (OpEq, { eexpr = TConst TNull }, { eexpr = TLocal v }) -> nulls := v :: !nulls
-				| TBinop (OpEq, { eexpr = TLocal v }, { eexpr = TConst TNull }) -> nulls := v :: !nulls
-				| TBinop (OpNotEq, { eexpr = TConst TNull }, { eexpr = TLocal v }) -> not_nulls := v :: !not_nulls
-				| TBinop (OpNotEq, { eexpr = TLocal v }, { eexpr = TConst TNull }) -> not_nulls := v :: !not_nulls
-				| TBinop (OpAnd, left_expr, right_expr) ->
-					traverse left_expr;
-					traverse right_expr;
-				| TBinop (OpOr, _, _) -> spotted_or := true
-				| TParenthesis e -> traverse e
-				| _ -> ()
+		match e.eexpr with
+			| TBinop (OpEq, { eexpr = TConst TNull }, { eexpr = TLocal v }) -> nulls := v :: !nulls
+			| TBinop (OpEq, { eexpr = TLocal v }, { eexpr = TConst TNull }) -> nulls := v :: !nulls
+			| TBinop (OpNotEq, { eexpr = TConst TNull }, { eexpr = TLocal v }) -> not_nulls := v :: !not_nulls
+			| TBinop (OpNotEq, { eexpr = TLocal v }, { eexpr = TConst TNull }) -> not_nulls := v :: !not_nulls
+			| TBinop (OpBoolAnd, left_expr, right_expr) ->
+				traverse left_expr;
+				traverse right_expr;
+			| TParenthesis e -> traverse e
+			| _ -> ()
 	in
 	traverse condition;
 	(!nulls, !not_nulls)
@@ -89,6 +86,7 @@ class local_vars =
 	object (self)
 		(** Hashtbl to collect local vars which are checked against `null` and are not nulls. *)
 		val mutable safe_locals = Hashtbl.create 100
+		method get_safe_locals = safe_locals
 		(**
 			Check if local variable is guaranteed to not have a `null` value.
 		*)
@@ -207,7 +205,8 @@ class virtual base_checker ctx =
 				| TVar (_, None) -> ()
 				| TBlock exprs -> List.iter self#check_expr exprs
 				| TFor _ -> ()
-				| TIf _ -> local_safety#process_if e self#check_expr self#check_expr
+				| TIf _ ->
+					local_safety#process_if e self#check_expr self#check_expr
 				| TWhile _ -> ()
 				| TSwitch _ -> ()
 				| TTry _ -> ()
