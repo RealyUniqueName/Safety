@@ -6,6 +6,7 @@ open Common
 open MacroApi
 open Type
 open Ast
+open Globals
 
 type safety_error = {
 	se_msg : string;
@@ -16,41 +17,20 @@ type safety_context = {
 	mutable sc_errors : safety_error list;
 }
 
-(* Determines if we have a Null<T>. Unlike is_null, this returns true even if the wrapped type is nullable itself. *)
-let rec is_explicit_null = function
-	| TMono r ->
-		(match !r with None -> false | Some t -> is_explicit_null t)
-	| TAbstract ({ a_path = ([],"Null") },[t]) ->
-		true
-	| TLazy f ->
-		is_null (lazy_type f)
-	| TType (t,tl) ->
-		is_null (apply_params t.t_params tl t.t_type)
-	| _ ->
-		false
-
 (**
-	Check `e` is nullable even if its type is reported non-nullable.
-	Haxe type system lies sometimes.
+	Terminates compiler process and prints user-friendly instructions about filing an issue in compiler repo.
 *)
-let rec is_nullable_expr e =
-	match e.eexpr with
-		| TConst TNull -> true
-		| TParenthesis e -> is_nullable_expr e
-		| TBlock exprs ->
-			(match exprs with
-				| [] -> false
-				| _ -> is_nullable_expr (List.hd (List.rev exprs))
-			)
-		| TIf (condition, if_body, else_body) ->
-			if is_nullable_expr if_body then
-				true
-			else
-				(match else_body with
-					| None -> false
-					| Some else_body -> is_nullable_expr else_body
-				)
-		| _ -> is_explicit_null e.etype
+let fail ?msg hxpos mlpos =
+	let msg =
+		(Lexer.get_error_pos (Printf.sprintf "%s:%d:") hxpos) ^ ": "
+		^ "Haxe-safety: " ^ (match msg with Some msg -> msg | _ -> "unexpected expression.") ^ "\n"
+		^ "Please submit an issue to https://github.com/RealyUniqueName/Haxe-Safety/issues with expression example and following information:"
+	in
+	match mlpos with
+		| (file, line, _, _) ->
+			Printf.eprintf "%s\n" msg;
+			Printf.eprintf "%s:%d\n" file line;
+			assert false
 
 let accessed_field_name access =
 	match access with
@@ -60,6 +40,33 @@ let accessed_field_name access =
 		| FDynamic name -> name
 		| FClosure (_, { cf_name = name }) -> name
 		| FEnum (_, { ef_name = name }) -> name
+
+(**
+	Class to simplify collecting lists of local vars checked against `null`.
+*)
+class local_vars =
+	object (self)
+		(** Hashtbl to collect local vars which are checked against `null` and are not nulls. *)
+		val mutable safe_locals = Hashtbl.create 100
+		(**
+			Check if local variable is guaranteed to not have a `null` value.
+		*)
+		method is_safe local_var =
+			Hashtbl.mem safe_locals local_var.v_id
+		(**
+			Clear collected data
+		*)
+		method clear =
+			Hashtbl.clear safe_locals
+		(**
+			This method should be called upon passing `if`.
+			It collects locals checked against `null` and executes blocks of `if` and `else` with proper statuses of locals.
+		*)
+		method process_if expr (if_callback:expr->unit) (else_callback:expr->unit) =
+			match expr.eexpr with
+				| TIf (contidtion, if_body, else_body) -> ()
+				| _ -> fail ~msg:"Expected TIf" expr.epos __POS__
+	end
 
 (**
 	This is a base class is used to recursively check typed expressions for null-safety
@@ -75,6 +82,43 @@ class virtual base_checker ctx =
 	*)
 	method error msg p =
 		ctx.sc_errors <- { se_msg = msg; se_pos = p; } :: ctx.sc_errors
+	(**
+		Determines if we have a Null<T> which was not checked against `null` yet.
+	*)
+	method is_nullable_type t =
+		match t with
+			| TMono r ->
+				(match !r with None -> false | Some t -> self#is_nullable_type t)
+			| TAbstract ({ a_path = ([],"Null") }, [t]) ->
+				true
+			| TLazy f ->
+				self#is_nullable_type (lazy_type f)
+			| TType (t,tl) ->
+				self#is_nullable_type (apply_params t.t_params tl t.t_type)
+			| _ ->
+				false
+	(**
+		Check if `e` is nullable even if the type is reported non-nullable.
+		Haxe type system lies sometimes.
+	*)
+	method private is_nullable_expr e =
+		match e.eexpr with
+			| TConst TNull -> true
+			| TParenthesis e -> self#is_nullable_expr e
+			| TBlock exprs ->
+				(match exprs with
+					| [] -> false
+					| _ -> self#is_nullable_expr (List.hd (List.rev exprs))
+				)
+			| TIf (condition, if_body, else_body) ->
+				if self#is_nullable_expr if_body then
+					true
+				else
+					(match else_body with
+						| None -> false
+						| Some else_body -> self#is_nullable_expr else_body
+					)
+			| _ -> self#is_nullable_type e.etype
 	(**
 		Recursively checks an expression
 	*)
@@ -115,9 +159,9 @@ class virtual base_checker ctx =
 		Check array access on nullable values or using nullable indexes
 	*)
 	method private check_array_access arr idx p =
-		if is_nullable_expr arr then
+		if self#is_nullable_expr arr then
 			self#error "Cannot perform array access on nullable value." p;
-		if is_nullable_expr idx then
+		if self#is_nullable_expr idx then
 			self#error "Cannot use nullable value as an index for array access." p;
 		self#check_expr arr;
 		self#check_expr idx
@@ -127,10 +171,10 @@ class virtual base_checker ctx =
 	method private check_binop op left_expr right_expr p =
 		(match op with
 			| OpAssign ->
-				if not (is_nullable_expr left_expr) && is_nullable_expr right_expr then
+				if not (self#is_nullable_expr left_expr) && self#is_nullable_expr right_expr then
 					self#error "Cannot assign nullable value to non-nullable acceptor." p
 			| _->
-				if is_nullable_expr left_expr || is_nullable_expr right_expr then
+				if self#is_nullable_expr left_expr || self#is_nullable_expr right_expr then
 					self#error "Cannot perform binary operation on nullable value." p
 		);
 		self#check_expr left_expr;
@@ -139,27 +183,27 @@ class virtual base_checker ctx =
 		Don't perform unops on nullable values
 	*)
 	method private check_unop e p =
-		if is_nullable_expr e then
+		if self#is_nullable_expr e then
 			self#error "Cannot execute unary operation on nullable value." p;
 		self#check_expr e
 	(**
 		Don't assign nullable value to non-nullable variable on var declaration
 	*)
 	method private check_var v e p =
-		if is_nullable_expr e && not (is_explicit_null v.v_type) then
+		if self#is_nullable_expr e && not (self#is_nullable_type v.v_type) then
 			self#error "Cannot assign nullable value to non-nullable variable." p;
 		self#check_expr e
 	(**
 		Make sure nobody tries to access a field on a nullable value
 	*)
 	method private check_field target access p =
-		if is_nullable_expr target then
+		if self#is_nullable_expr target then
 			self#error ("Cannot access \"" ^ accessed_field_name access ^ "\" of a nullable value.") p
 	(**
 		Check calls: don't call a nullable value, dont' pass nulable values to non-nullable arguments
 	*)
 	method check_call callee args =
-		if is_nullable_expr callee then
+		if self#is_nullable_expr callee then
 			self#error "Cannot call a nullable value." callee.epos;
 		self#check_expr callee;
 		List.iter self#check_expr args;
@@ -168,15 +212,16 @@ class virtual base_checker ctx =
 				let rec traverse args types =
 					match (args, types) with
 						| (a :: args, (arg_name, _, t) :: types) ->
-							if (is_nullable_expr a) && not (is_explicit_null t) then begin
+							if (self#is_nullable_expr a) && not (self#is_nullable_type t) then begin
 								let fn_name = match callee.eexpr with
 									| TField (_, access) -> field_name access
 									| TIdent fn_name -> fn_name
 									| TLocal { v_name = fn_name } -> fn_name
 									| _ -> ""
 								in
-								let appendix = if fn_name = "" then fn_name else " of function \"" ^ fn_name ^ "\"" in
-								self#error ("Cannont pass nullable value to non-nullable argument \"" ^ arg_name ^ "\"" ^ appendix ^ ".") a.epos
+								let fn_str = if fn_name = "" then "" else " of function \"" ^ fn_name ^ "\""
+								and arg_str = if arg_name = "" then "" else " \" ^ arg_name ^ \"" in
+								self#error ("Cannont pass nullable value to non-nullable argument" ^ arg_str ^ fn_str ^ ".") a.epos
 							end;
 							traverse args types
 						| _ -> ()

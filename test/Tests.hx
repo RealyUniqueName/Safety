@@ -27,7 +27,7 @@ class Tests
 		shouldFail(a.length);
 	}
 
-	static function fieldAccess_onNonNullableValue_shouldPass():Void {
+	static function fieldAccess_onNotNullableValue_shouldPass():Void {
 		var a:String = "hello";
 		a.length;
 	}
@@ -37,7 +37,7 @@ class Tests
 		shouldFail(b.length);
 	}
 
-	static function fieldAccess_onOptionalNonNullableValue_shouldPass(a:String = 'hello'):Void {
+	static function fieldAccess_onOptionalNotNullableValue_shouldPass(a:String = 'hello'):Void {
 		a.length;
 	}
 
@@ -46,12 +46,12 @@ class Tests
 		shouldFail(fn());
 	}
 
-	static function call_onNonNullableValue_shouldPass() {
+	static function call_onNotNullableValue_shouldPass() {
 		var fn:Void->Void = function() {}
 		fn();
 	}
 
-	static function call_nullableValueToNonNullableArgument_shouldFail() {
+	static function call_nullableValueToNotNullableArgument_shouldFail() {
 		var fn = function(a:String) {}
 		var v:Null<String> = 'hello';
 		shouldFail(fn(v));
@@ -64,19 +64,19 @@ class Tests
 		fn(v);
 	}
 
-	static function varDecl_assignNullableValueToNonNullableVar_shouldFail() {
+	static function varDecl_assignNullableValueToNotNullableVar_shouldFail() {
 		var v:Null<String> = 'hello';
 		shouldFail(var s:String = v);
 		shouldFail(var s:String = null);
 	}
 
-	static function assign_nullableValueToNonNullable_shouldFail() {
+	static function assign_nullableValueToNotNullable_shouldFail() {
 		var a:Null<Int> = 0;
 		var b = 10;
 		shouldFail(b = a);
 	}
 
-	static function assign_nonNullableValueToNullable_shouldPass() {
+	static function assign_notNullableValueToNullable_shouldPass() {
 		var a:Null<Int> = null;
 		var b = 10;
 		a = b;
@@ -93,12 +93,11 @@ class Tests
 		shouldFail(a++);
 	}
 
-	static function ternary_nullableElse_assignToNonNullableValue_shouldFail() {
+	static function ternary_nullableElse_assignToNotNullableValue_shouldFail() {
 		var v:Null<String> = 'a';
 		var a:String;
 		shouldFail((true ? 'hello' : v).length);
 	}
-
 
 	static function arrayAccess_nullableArray_shouldFail() {
 		var a:Null<Array<Int>> = [];
@@ -116,12 +115,18 @@ class Tests
 		shouldFail(a[0].length);
 	}
 
-	static function typeInference_assignNullableValueToVariableWithoutExplicitTyping_shouldPass(nullable:Null<String>) {
+	static function typeInference_assignNullableValueToVariableWithoutExplicitTyping_shouldPass(nullable:String = null) {
 		var s = nullable;
 	}
 
 	static function typeInference_fieldAccessOnInferredNullableType_shouldFail(nullable:Null<String>) {
 		var s = nullable;
 		shouldFail(s.length);
+	}
+
+	static var notNullableSetter(default,set):String = 'hello';
+	static function set_notNullableSetter(v) return notNullableSetter = v;
+	static function setter_passNullableValueToNotNullableSetter_shouldFail(?v:String) {
+		shouldFail(notNullableSetter = v);
 	}
 }
