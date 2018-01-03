@@ -6,7 +6,7 @@ import eval.vm.Context in EvalContext;
 
 class Validator {
 #if macro
-	static var expectedErrors:Array<{test:String, pos:Position}>;
+	static var expectedErrors:Array<{method:String, pos:Position}>;
 
 	static public function register() {
 		if(Context.defined('display')) return;
@@ -40,7 +40,7 @@ class Validator {
 			Context.warning(error.msg, error.pos);
 		}
 		for(expected in expectedErrors) {
-			Context.warning('Expression was expected to fail, but it did not fail in "${expected.test}" test.', expected.pos);
+			Context.warning('Expression was expected to fail, but it did not fail in "${expected.method}".', expected.pos);
 		}
 		if(errors.length + expectedErrors.length > 0) {
 			Context.error('Tests failed. See warnings.', Context.currentPos());
@@ -57,7 +57,7 @@ class Validator {
 #end
 
 	macro static public function shouldFail(expr:Expr):Expr {
-		expectedErrors.push({test:Context.getLocalMethod(), pos:expr.pos});
+		expectedErrors.push({method:Context.getLocalMethod(), pos:expr.pos});
 		return expr;
 	}
 }

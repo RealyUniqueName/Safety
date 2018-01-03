@@ -129,4 +129,42 @@ class Tests
 	static function setter_passNullableValueToNotNullableSetter_shouldFail(?v:String) {
 		shouldFail(notNullableSetter = v);
 	}
+
+	static function checkAgainstNull_transferSafeNullableLocalToNotNullable_shouldPass(?a:String) {
+		var s:String;
+		if(a == null) {} else s = a;
+		if(null == a) {} else s = a;
+		if(a != null) s = a;
+		if(null != a) s = a;
+		s = (a == null ? 'hello' : a);
+		s = (null == a ? 'hello' : a);
+		s = (a != null ? a : 'hello');
+		s = (null != a ? a : 'hello');
+		s = if(a == null) {
+			'hello';
+		} else {
+			'other expressions';
+			a;
+		}
+	}
+
+	// static function checkAgainstNull_complexConditions() {
+	// 	var nullable:Null<String> = 'hello';
+	// 	var s:String;
+	// 	if(nullable != null && true) {
+	// 		s = nullable;
+	// 	} else {
+	// 		shouldFail(s = nullable);
+	// 	}
+	// 	if(false && (true || false) && null == nullable) {
+	// 		shouldFail(s = nullable);
+	// 	} else {
+	// 		s = nullable;
+	// 	}
+	// 	if(true || nullable != null) {
+	// 		shouldFail(s = nullable);
+	// 	} else {
+	// 		shouldFail(s = nullable);
+	// 	}
+	// }
 }
