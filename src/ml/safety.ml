@@ -95,7 +95,7 @@ class local_vars =
 			|| not (is_nullable_type local_var.v_type)
 		(**
 			This method should be called upon passing `if`.
-			It collects locals checked against `null` and executes callbacks for expressions with proper statuses of locals.
+			It collects locals which are checked against `null` and executes callbacks for expressions with proper statuses of locals.
 		*)
 		method process_if expr (condition_callback:texpr->unit) (body_callback:texpr->unit) =
 			match expr.eexpr with
@@ -250,21 +250,24 @@ class virtual base_checker ctx =
 			Don't perform unsafe binary operations
 		*)
 		method private check_binop op left_expr right_expr p =
-			(match op with
-				| OpEq | OpNotEq -> ()
+			let check_both () =
+				self#check_expr left_expr;
+				self#check_expr right_expr
+			in
+			match op with
+				| OpEq | OpNotEq -> check_both()
 				| OpBoolAnd ->
 					local_safety#process_and left_expr right_expr self#check_expr
 				| OpBoolOr ->
 					local_safety#process_or left_expr right_expr self#check_expr
 				| OpAssign ->
 					if not (self#is_nullable_expr left_expr) && self#is_nullable_expr right_expr then
-						self#error "Cannot assign nullable value to not-nullable acceptor." p
+						self#error "Cannot assign nullable value to not-nullable acceptor." p;
+					check_both()
 				| _->
 					if self#is_nullable_expr left_expr || self#is_nullable_expr right_expr then
-						self#error "Cannot perform binary operation on nullable value." p
-			);
-			self#check_expr left_expr;
-			self#check_expr right_expr
+						self#error "Cannot perform binary operation on nullable value." p;
+					check_both()
 		(**
 			Don't perform unops on nullable values
 		*)

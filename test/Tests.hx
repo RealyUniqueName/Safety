@@ -165,18 +165,18 @@ class Tests
 		}
 	}
 
-	// static function checkAgainstNull_checkAndFieldAccess(?a:String) {
-	// 	var s:Null<String> = 'hello';
-	// 	if(s != null && s.length == 0) {}
-	// 	if(s == null || s.length == 0) {}
-	// 	s != null && s.length == 0;
-	// 	s == null || s.length == 0;
+	static function checkAgainstNull_checkAndFieldAccess(?a:String) {
+		var s:Null<String> = 'hello';
+		if(s != null && s.length == 0) {}
+		if(s == null || s.length == 0) {}
+		s != null && s.length == 0;
+		s == null || s.length == 0;
 
-	// 	shouldFail(if(s != null || s.length == 0) {});
-	// 	shouldFail(if(s == null && s.length == 0) {});
-	// 	shouldFail(s != null || s.length == 0);
-	// 	shouldFail(s == null && s.length == 0);
-	// }
+		shouldFail(if(s != null || s.length == 0) {});
+		shouldFail(if(s == null && s.length == 0) {});
+		shouldFail(s != null || s.length == 0);
+		shouldFail(s == null && s.length == 0);
+	}
 
 	static function checkAgainstNull_complexConditions() {
 		var nullable:Null<String> = 'hello';
