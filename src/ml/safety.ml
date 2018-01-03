@@ -77,7 +77,8 @@ class virtual base_checker ctx =
 			| TObjectDecl _ -> ()
 			| TArrayDecl _ -> ()
 			| TCall (callee, args) -> self#check_call callee args
-			| TNew _ -> ()
+			| TNew ({ cl_constructor = Some { cf_expr = Some callee } }, _, args) -> self#check_call callee args
+			| TNew (_, _, args) -> List.iter self#check_expr args
 			| TUnop (_, _, expr) -> self#check_unop expr e.epos
 			| TFunction fn -> self#check_expr fn.tf_expr
 			| TVar (v, Some init_expr) -> self#check_var v init_expr e.epos
@@ -153,9 +154,17 @@ class virtual base_checker ctx =
 			| TFun (types, _) ->
 				let rec traverse args types =
 					match (args, types) with
-						| (a :: args, (_, _, t) :: types) ->
-							if (is_nullable_expr a) && not (is_explicit_null t) then
-								self#error "Cannont pass nullable value to non-nullable argument." a.epos;
+						| (a :: args, (arg_name, _, t) :: types) ->
+							if (is_nullable_expr a) && not (is_explicit_null t) then begin
+								let fn_name = match callee.eexpr with
+									| TField (_, access) -> field_name access
+									| TIdent fn_name -> fn_name
+									| TLocal { v_name = fn_name } -> fn_name
+									| _ -> ""
+								in
+								let appendix = if fn_name = "" then fn_name else " of function \"" ^ fn_name ^ "\"" in
+								self#error ("Cannont pass nullable value to non-nullable argument \"" ^ arg_name ^ "\"" ^ appendix ^ ".") a.epos
+							end;
 							traverse args types
 						| _ -> ()
 				in

@@ -34,10 +34,24 @@ class Safety {
 	}
 #else
 
+	/**
+	 *  Returns `value` if it is not `null`. Otherwise returns `defaultValue.
+	 */
 	static public inline function or<T>(value:Null<T>, defaultValue:T):T {
 		return (value == null ? defaultValue : value);
 	}
 
+	/**
+	 *  Returns `value` if it is not `null`. Otherwise throws an exception.
+	 *  @throws NullException if `value` is `null`.
+	 */
+	// static public inline function safe<T>(value:Null<T>):T {
+	// 	return (value == null ? throw new safety.NullException() : value);
+	// }
+
+	/**
+	 *  Always returns `value`, but typed as non-nullable. Use at your own risk.
+	 */
 	static public inline function unsafe<T>(value:Null<T>):T {
 		return (value:T);
 	}

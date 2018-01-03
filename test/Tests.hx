@@ -55,6 +55,7 @@ class Tests
 		var fn = function(a:String) {}
 		var v:Null<String> = 'hello';
 		shouldFail(fn(v));
+		// shouldFail(new Tests(v));
 	}
 
 	static function call_nullableValueToOptionalArgument_shouldPass() {
@@ -111,8 +112,19 @@ class Tests
 	}
 
 	// TODO
-	// static function arrayAccess_fieldOnNullableValue_shouldFail() {
+	// static function typeInference_arrayAccess_fieldOnNullableItem_shouldFail() {
 	// 	var a:Array<Null<String>> = [];
 	// 	shouldFail(a[0].length);
+	// }
+
+	// static function typeInference_fieldAccessOnInferredNullableType_shouldFail() {
+	// 	var nullable:Null<String> = 'hello';
+	// 	var s = nullable;
+	// 	shouldFail(s.length);
+	// }
+
+	// static function typeInference_assignNullableValueToVariableWithoutExplicitTyping_shouldPass() {
+	// 	var nullable:Null<String> = 'hello';
+	// 	var s = nullable;
 	// }
 }
