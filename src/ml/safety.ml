@@ -58,6 +58,28 @@ let rec is_nullable_type t =
 			false
 
 (**
+	Collect nullable local vars which are checked against `null`.
+	Returns a tuple of (vars_checked_to_be_null * vars_checked_to_be_not_null) in case `condition` evaluates to `true`.
+*)
+let process_condition condition (callback:texpr->unit) =
+	let nulls = ref []
+	and not_nulls = ref [] in
+	let rec traverse e =
+		match e.eexpr with
+			| TBinop (OpEq, { eexpr = TConst TNull }, { eexpr = TLocal v }) -> nulls := v :: !nulls
+			| TBinop (OpEq, { eexpr = TLocal v }, { eexpr = TConst TNull }) -> nulls := v :: !nulls
+			| TBinop (OpNotEq, { eexpr = TConst TNull }, { eexpr = TLocal v }) -> not_nulls := v :: !not_nulls
+			| TBinop (OpNotEq, { eexpr = TLocal v }, { eexpr = TConst TNull }) -> not_nulls := v :: !not_nulls
+			| TBinop (OpBoolAnd, left_expr, right_expr) ->
+				traverse left_expr;
+				traverse right_expr;
+			| TParenthesis e -> traverse e
+			| _ -> callback e
+	in
+	traverse condition;
+	(!nulls, !not_nulls)
+
+(**
 	Class to simplify collecting lists of local vars checked against `null`.
 *)
 class local_vars =
@@ -73,51 +95,42 @@ class local_vars =
 			|| not (is_nullable_type local_var.v_type)
 		(**
 			This method should be called upon passing `if`.
-			It collects locals checked against `null` and executes `callback` for expressions with proper statuses of locals.
+			It collects locals checked against `null` and executes callbacks for expressions with proper statuses of locals.
 		*)
-		method process_if expr (callback:texpr->unit) =
+		method process_if expr (condition_callback:texpr->unit) (body_callback:texpr->unit) =
 			match expr.eexpr with
 				| TIf (condition, if_body, else_body) ->
-					let (nulls, not_nulls) = self#process_condition condition callback in
+					condition_callback condition;
+					let (nulls, not_nulls) = process_condition condition (fun _ -> ()) in
 					(** execute `if_body` with known not-null variables *)
 					self#add_to_safety not_nulls;
-					callback if_body;
+					body_callback if_body;
 					self#remove_from_safety not_nulls;
 					(** execute `else_body` with known not-null variables *)
 					(match else_body with
 						| None -> ()
 						| Some else_body ->
 							self#add_to_safety nulls;
-							callback else_body;
+							body_callback else_body;
 							self#remove_from_safety nulls
 					)
 				| _ -> fail ~msg:"Expected TIf" expr.epos __POS__
 		(**
-			Collect nullable local vars which are checked against `null`.
-			Returns a tuple of (vars_checked_to_be_null * vars_checked_to_be_not_null) in case `condition` evaluates to `true`.
+			Handle boolean AND outside of `if` condition.
 		*)
-		method process_condition condition (callback:texpr->unit) =
-			let nulls = ref []
-			and not_nulls = ref [] in
-			let checked_and_safe v =
-				self#add_to_safety [v];
-				not_nulls := v :: !not_nulls
-			in
-			let rec traverse e =
-				match e.eexpr with
-					| TBinop (OpEq, { eexpr = TConst TNull }, { eexpr = TLocal v }) -> nulls := v :: !nulls
-					| TBinop (OpEq, { eexpr = TLocal v }, { eexpr = TConst TNull }) -> nulls := v :: !nulls
-					| TBinop (OpNotEq, { eexpr = TConst TNull }, { eexpr = TLocal v }) -> checked_and_safe v
-					| TBinop (OpNotEq, { eexpr = TLocal v }, { eexpr = TConst TNull }) -> checked_and_safe v
-					| TBinop (OpBoolAnd, left_expr, right_expr) ->
-						traverse left_expr;
-						traverse right_expr;
-					| TParenthesis e -> traverse e
-					| _ -> callback e
-			in
-			traverse condition;
-			self#remove_from_safety !not_nulls;
-			(!nulls, !not_nulls)
+		method process_and left_expr right_expr (callback:texpr->unit) =
+			let (_, not_nulls) = process_condition left_expr callback in
+			self#add_to_safety not_nulls;
+			callback right_expr;
+			self#remove_from_safety not_nulls
+		(**
+			Handle boolean OR outside of `if` condition.
+		*)
+		method process_or left_expr right_expr (callback:texpr->unit) =
+			let (nulls, _) = process_condition left_expr callback in
+			self#add_to_safety nulls;
+			callback right_expr;
+			self#remove_from_safety nulls
 		(**
 			Add variables to the list of safe locals.
 		*)
@@ -144,6 +157,7 @@ class local_vars =
 class virtual base_checker ctx =
 	object (self)
 		val local_safety = new local_vars
+		(* val mutable cnt = 0 *)
 		(**
 			Entry point for checking a all expression in current type
 		*)
@@ -152,9 +166,12 @@ class virtual base_checker ctx =
 			Register an error
 		*)
 		method error msg p =
-			ctx.sc_errors <- { se_msg = msg; se_pos = p; } :: ctx.sc_errors
+			ctx.sc_errors <- { se_msg = msg; se_pos = p; } :: ctx.sc_errors;
+			(* cnt <- cnt + 1;
+			if cnt = 2 then assert false *)
+
 		(**
-			Check if `e` is nullable even if the type is reported non-nullable.
+			Check if `e` is nullable even if the type is reported not-nullable.
 			Haxe type system lies sometimes.
 		*)
 		method private is_nullable_expr e =
@@ -170,7 +187,7 @@ class virtual base_checker ctx =
 				| TIf _ ->
 					let nullable = ref false in
 					let check body = nullable := !nullable || self#is_nullable_expr body in
-					local_safety#process_if e check;
+					local_safety#process_if e (fun _ -> ()) check;
 					!nullable
 				| _ -> is_nullable_type e.etype
 		(**
@@ -196,8 +213,7 @@ class virtual base_checker ctx =
 				| TVar (_, None) -> ()
 				| TBlock exprs -> List.iter self#check_expr exprs
 				| TFor _ -> ()
-				| TIf _ ->
-					local_safety#process_if e self#check_expr
+				| TIf _ -> self#check_if e
 				| TWhile _ -> ()
 				| TSwitch _ -> ()
 				| TTry _ -> ()
@@ -210,6 +226,16 @@ class virtual base_checker ctx =
 				| TEnumParameter _ -> ()
 				| TEnumIndex _ -> ()
 				| TIdent _ -> ()
+		(**
+			Check safety in `if` expressions
+		*)
+		method private check_if e =
+			let check_condition e =
+				if self#is_nullable_expr e then
+					self#error "Cannot use nullable value as condition in \"if\"." e.epos;
+				self#check_expr e
+			in
+			local_safety#process_if e check_condition self#check_expr
 		(**
 			Check array access on nullable values or using nullable indexes
 		*)
@@ -225,10 +251,14 @@ class virtual base_checker ctx =
 		*)
 		method private check_binop op left_expr right_expr p =
 			(match op with
+				| OpEq | OpNotEq -> ()
+				| OpBoolAnd ->
+					local_safety#process_and left_expr right_expr self#check_expr
+				| OpBoolOr ->
+					local_safety#process_or left_expr right_expr self#check_expr
 				| OpAssign ->
 					if not (self#is_nullable_expr left_expr) && self#is_nullable_expr right_expr then
-						self#error "Cannot assign nullable value to non-nullable acceptor." p
-				| OpEq | OpNotEq -> ()
+						self#error "Cannot assign nullable value to not-nullable acceptor." p
 				| _->
 					if self#is_nullable_expr left_expr || self#is_nullable_expr right_expr then
 						self#error "Cannot perform binary operation on nullable value." p
@@ -243,11 +273,11 @@ class virtual base_checker ctx =
 				self#error "Cannot execute unary operation on nullable value." p;
 			self#check_expr e
 		(**
-			Don't assign nullable value to non-nullable variable on var declaration
+			Don't assign nullable value to not-nullable variable on var declaration
 		*)
 		method private check_var v e p =
 			if self#is_nullable_expr e && not (is_nullable_type v.v_type) then
-				self#error "Cannot assign nullable value to non-nullable variable." p;
+				self#error "Cannot assign nullable value to not-nullable variable." p;
 			self#check_expr e
 		(**
 			Make sure nobody tries to access a field on a nullable value
@@ -257,7 +287,7 @@ class virtual base_checker ctx =
 				self#error ("Cannot access \"" ^ accessed_field_name access ^ "\" of a nullable value.") p;
 			self#check_expr target
 		(**
-			Check calls: don't call a nullable value, dont' pass nulable values to non-nullable arguments
+			Check calls: don't call a nullable value, dont' pass nulable values to not-nullable arguments
 		*)
 		method check_call callee args =
 			if self#is_nullable_expr callee then
@@ -278,7 +308,7 @@ class virtual base_checker ctx =
 									in
 									let fn_str = if fn_name = "" then "" else " of function \"" ^ fn_name ^ "\""
 									and arg_str = if arg_name = "" then "" else " \" ^ arg_name ^ \"" in
-									self#error ("Cannont pass nullable value to non-nullable argument" ^ arg_str ^ fn_str ^ ".") a.epos
+									self#error ("Cannont pass nullable value to not-nullable argument" ^ arg_str ^ fn_str ^ ".") a.epos
 								end;
 								self#check_expr a;
 								traverse args types;

@@ -122,6 +122,11 @@ class Tests
 		shouldFail(a[idx]);
 	}
 
+	static function if_nullableCondition_shouldFail() {
+		var s:Null<Bool> = false;
+		shouldFail(if(s) {});
+	}
+
 	static function typeInference_arrayAccess_fieldOnNullableItem_shouldFail() {
 		var a:Array<Null<String>> = [];
 		shouldFail(a[0].length);
@@ -160,10 +165,17 @@ class Tests
 		}
 	}
 
-	// static function checkAgainstNull_checkAndFieldAccess_shouldPass(?a:String) {
+	// static function checkAgainstNull_checkAndFieldAccess(?a:String) {
 	// 	var s:Null<String> = 'hello';
 	// 	if(s != null && s.length == 0) {}
+	// 	if(s == null || s.length == 0) {}
 	// 	s != null && s.length == 0;
+	// 	s == null || s.length == 0;
+
+	// 	shouldFail(if(s != null || s.length == 0) {});
+	// 	shouldFail(if(s == null && s.length == 0) {});
+	// 	shouldFail(s != null || s.length == 0);
+	// 	shouldFail(s == null && s.length == 0);
 	// }
 
 	static function checkAgainstNull_complexConditions() {
