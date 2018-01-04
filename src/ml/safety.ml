@@ -227,9 +227,9 @@ class virtual base_checker ctx =
 			if self#is_nullable_expr expr && not (is_nullable_type to_type) then
 				false
 			else
-				true
-				(* match expr.eexpr with
-					|  *)
+				match expr.eexpr with
+					| TCast (e, _) | TMeta (_, e) -> self#can_pass e to_type
+					| _ -> true
 		(**
 			Recursively checks an expression
 		*)
@@ -279,7 +279,7 @@ class virtual base_checker ctx =
 		method private check_return e p =
 			self#check_expr e;
 			match return_types with
-				| current :: _ when self#is_nullable_expr e && not (is_nullable_type current) ->
+				| t :: _ when not (self#can_pass e t) ->
 					self#error "Cannot return nullable value from function with not nullable return type." p
 				| _ -> ()
 		(**
@@ -352,7 +352,7 @@ class virtual base_checker ctx =
 			Don't assign nullable value to not-nullable variable on var declaration
 		*)
 		method private check_var v e p =
-			if self#is_nullable_expr e && not (is_nullable_type v.v_type) then
+			if not (self#can_pass e v.v_type) then
 				self#error "Cannot assign nullable value to not-nullable variable." p;
 			self#check_expr e
 		(**
@@ -375,7 +375,7 @@ class virtual base_checker ctx =
 					let rec traverse args types =
 						match (args, types) with
 							| (a :: args, (arg_name, _, t) :: types) ->
-								if (self#is_nullable_expr a) && not (is_nullable_type t) then begin
+								if not (self#can_pass a t) then begin
 									let fn_name = match callee.eexpr with
 										| TField (_, access) -> field_name access
 										| TIdent fn_name -> fn_name
