@@ -222,9 +222,21 @@ class Tests
 		}
 	}
 
-	// static function objectDecl_passObjWithNullabelFieldToObjWithNotNullableField_shouldFail() {
-
+	// static function objectDecl_passObjWithNullabelFieldToObjWithNotNullableField_shouldFail(?a:String) {
+	// 	shouldFail(var o:{field:String} = {field:a});
 	// }
+
+	static function cast_nullableExprToNotNullableType_shouldFail() {
+		var s:Null<String> = 'hello';
+		shouldFail((s:String));
+		shouldFail(cast(s, String));
+	}
+
+	static function cast_nullableExprToNullableType_shouldPass() {
+		var s:Null<String> = 'hello';
+		function dummy(?a:String) {}
+		dummy(cast s);
+	}
 
 	// TODO far far future
 	// static function checkAgainstNull_assignCheckedValueToVarWithoutExplicitType_shouldTypeAsNotNullable() {

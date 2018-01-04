@@ -262,11 +262,18 @@ class virtual base_checker ctx =
 				| TBreak -> ()
 				| TContinue -> ()
 				| TThrow _ -> ()
-				| TCast _ -> ()
+				| TCast (expr, _) -> self#check_cast expr e.etype e.epos
 				| TMeta (_, e) -> self#check_expr e
 				| TEnumParameter _ -> ()
 				| TEnumIndex _ -> ()
 				| TIdent _ -> ()
+		(**
+			Don't cast nullable expressions to not-nullable types
+		*)
+		method private check_cast expr to_type p =
+			if not (self#can_pass expr to_type) then
+				self#error "Cannot cast nullable value to not nullable type." p;
+			self#check_expr expr
 		(**
 			Check safety in a function
 		*)
