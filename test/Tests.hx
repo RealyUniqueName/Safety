@@ -246,6 +246,11 @@ class Tests
 		shouldFail(throw s);
 	}
 
+	static function arrayDeclaration_shouldCheck(?a:String) {
+		var s:String;
+		shouldFail([s = a]);
+	}
+
 	static function tryCatch_shouldCheck(?a:String) {
 		var s:String;
 		try {

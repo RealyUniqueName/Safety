@@ -260,7 +260,7 @@ class virtual base_checker ctx =
 				| TTypeExpr _ -> ()
 				| TParenthesis e -> self#check_expr e
 				| TObjectDecl fields -> List.iter (fun (_, e) -> self#check_expr e) fields
-				| TArrayDecl _ -> ()
+				| TArrayDecl exprs -> List.iter self#check_expr exprs
 				| TCall (callee, args) -> self#check_call callee args
 				| TNew ({ cl_constructor = Some { cf_expr = Some callee } }, _, args) -> self#check_call callee args
 				| TNew (_, _, args) -> List.iter self#check_expr args
