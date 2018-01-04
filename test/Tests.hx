@@ -4,6 +4,11 @@ import Validator.shouldFail;
 
 using Safety;
 
+private enum DummyEnum {
+	DummyOne;
+	DummyTwo(a:Int, ?b:String);
+}
+
 class Tests
 {
 	/**
@@ -270,6 +275,13 @@ class Tests
 		var s:Null<String> = 'hello';
 		function dummy(?a:String) {}
 		dummy(cast s);
+	}
+
+	static function enum_switchOnNullableEnum_shouldFail(e:Null<DummyEnum>) {
+		switch shouldFail(e) {
+			case DummyOne:
+			case DummyTwo(a, b):
+		}
 	}
 
 	// TODO far far future

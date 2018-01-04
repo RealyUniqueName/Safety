@@ -280,9 +280,16 @@ class virtual base_checker ctx =
 				| TThrow expr -> self#check_throw expr e.epos
 				| TCast (expr, _) -> self#check_cast expr e.etype e.epos
 				| TMeta (_, e) -> self#check_expr e
-				| TEnumParameter _ -> ()
-				| TEnumIndex _ -> ()
+				| TEnumParameter (e, _, _) -> self#check_expr e
+				| TEnumIndex idx -> self#check_enum_index idx
 				| TIdent _ -> ()
+		(**
+			Deal with nullable enum values
+		*)
+		method private check_enum_index idx =
+			if self#is_nullable_expr idx then
+				self#error "Cannot access nullable enum value." idx.epos;
+			self#check_expr idx
 		(**
 			Check try...catch
 		*)
@@ -342,6 +349,7 @@ class virtual base_checker ctx =
 		method private check_switch target cases default =
 			if self#is_nullable_expr target then
 				self#error "Cannot switch on nullable value." target.epos;
+			self#check_expr target;
 			let rec traverse_cases cases =
 				match cases with
 					| [] -> ()
