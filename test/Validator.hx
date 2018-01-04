@@ -58,7 +58,9 @@ class Validator {
 #end
 
 	macro static public function shouldFail(expr:Expr):Expr {
-		expectedErrors.push({method:Context.getLocalMethod(), pos:expr.pos});
+		if(!Context.defined('display')) {
+			expectedErrors.push({method:Context.getLocalMethod(), pos:expr.pos});
+		}
 		return expr;
 	}
 }

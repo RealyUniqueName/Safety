@@ -186,6 +186,7 @@ class local_vars =
 class virtual base_checker ctx =
 	object (self)
 		val local_safety = new local_vars
+		val mutable return_types = []
 		(* val mutable cnt = 0 *)
 		(**
 			Entry point for checking a all expression in current type
@@ -237,7 +238,7 @@ class virtual base_checker ctx =
 				| TNew ({ cl_constructor = Some { cf_expr = Some callee } }, _, args) -> self#check_call callee args
 				| TNew (_, _, args) -> List.iter self#check_expr args
 				| TUnop (_, _, expr) -> self#check_unop expr e.epos
-				| TFunction fn -> self#check_expr fn.tf_expr
+				| TFunction fn -> self#check_function fn
 				| TVar (v, Some init_expr) -> self#check_var v init_expr e.epos
 				| TVar (_, None) -> ()
 				| TBlock exprs -> List.iter self#check_expr exprs
@@ -246,7 +247,8 @@ class virtual base_checker ctx =
 				| TWhile _ -> ()
 				| TSwitch (target, cases, default) -> self#check_switch target cases default
 				| TTry _ -> ()
-				| TReturn _ -> ()
+				| TReturn (Some expr) -> self#check_return expr e.epos
+				| TReturn None -> ()
 				| TBreak -> ()
 				| TContinue -> ()
 				| TThrow _ -> ()
@@ -255,6 +257,21 @@ class virtual base_checker ctx =
 				| TEnumParameter _ -> ()
 				| TEnumIndex _ -> ()
 				| TIdent _ -> ()
+		(**
+			Check safety in a function
+		*)
+		method private check_function fn =
+			return_types <- fn.tf_type :: return_types;
+			self#check_expr fn.tf_expr
+		(**
+			Don't return nullable values as not-nullable return types.
+		*)
+		method private check_return e p =
+			self#check_expr e;
+			match return_types with
+				| current :: _ when self#is_nullable_expr e && not (is_nullable_type current) ->
+					self#error "Cannot return nullable value from function with not nullable return type." p
+				| _ -> ()
 		(**
 			Check safety in `switch` expressions.
 		*)

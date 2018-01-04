@@ -208,6 +208,13 @@ class Tests
 		}
 	}
 
+	static function return_nullableValueFromNotNullableResult_shouldFail(?a:String):String {
+		shouldFail(return a);
+		function local():String {
+			shouldFail(return a);
+		}
+	}
+
 	// TODO far far future
 	// static function checkAgainstNull_assignCheckedValueToVarWithoutExplicitType_shouldTypeAsNotNullable() {
 	// 	var nullable:Null<String> = 'hello';
