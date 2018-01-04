@@ -123,6 +123,23 @@ class local_vars =
 			Hashtbl.mem safe_locals local_var.v_id
 			|| not (is_nullable_type local_var.v_type)
 		(**
+			This method should be called upon passing `while`.
+			It collects locals which are checked against `null` and executes callbacks for expressions with proper statuses of locals.
+		*)
+		method process_while expr is_nullable_expr (condition_callback:texpr->unit) (body_callback:texpr->unit) =
+			match expr.eexpr with
+				| TWhile (condition, body, DoWhile) ->
+					condition_callback condition;
+					body_callback body
+				| TWhile (condition, body, NormalWhile) ->
+					condition_callback condition;
+					let (nulls, not_nulls) = process_condition condition is_nullable_expr (fun _ -> ()) in
+					(** execute `body` with known not-null variables *)
+					self#add_to_safety not_nulls;
+					body_callback body;
+					self#remove_from_safety not_nulls;
+				| _ -> fail ~msg:"Expected TWhile" expr.epos __POS__
+		(**
 			This method should be called upon passing `if`.
 			It collects locals which are checked against `null` and executes callbacks for expressions with proper statuses of locals.
 		*)
@@ -252,9 +269,9 @@ class virtual base_checker ctx =
 				| TVar (v, Some init_expr) -> self#check_var v init_expr e.epos
 				| TVar (_, None) -> ()
 				| TBlock exprs -> List.iter self#check_expr exprs
-				| TFor _ -> ()
+				| TFor (_, iterable, body) -> self#check_for iterable body
 				| TIf _ -> self#check_if e
-				| TWhile _ -> ()
+				| TWhile _ -> self#check_while e
 				| TSwitch (target, cases, default) -> self#check_switch target cases default
 				| TTry _ -> ()
 				| TReturn (Some expr) -> self#check_return expr e.epos
@@ -267,6 +284,24 @@ class virtual base_checker ctx =
 				| TEnumParameter _ -> ()
 				| TEnumIndex _ -> ()
 				| TIdent _ -> ()
+		(**
+			Don't use nullable value as a condition in `while`
+		*)
+		method private check_while e =
+			let check_condition e =
+				if self#is_nullable_expr e then
+					self#error "Cannot use nullable value as condition in \"while\"." e.epos;
+				self#check_expr e
+			in
+			local_safety#process_while e self#is_nullable_expr check_condition self#check_expr
+		(**
+			Don't iterate on nullable values
+		*)
+		method private check_for iterable body =
+			if self#is_nullable_expr iterable then
+				self#error "Cannot iterate over nullable value." iterable.epos;
+			self#check_expr iterable;
+			self#check_expr body
 		(**
 			Don't throw nullable values
 		*)

@@ -226,6 +226,21 @@ class Tests
 	// 	shouldFail(var o:{field:String} = {field:a});
 	// }
 
+	static function for_iterateOverNullableValue_shouldFail(?a:Iterable<Int>) {
+		for(i in shouldFail(a)) {}
+	}
+
+	static function while_nullableCondition_shouldFail(?a:Bool) {
+		shouldFail(while(a) {});
+	}
+
+	static function while_checkAgainstNullInConditionAndUseInBody(?a:Bool) {
+		var b:Bool;
+		while(a != null) b = a;
+		do shouldFail(b = a) while(a != null);
+		while(a == null) shouldFail(b = a);
+	}
+
 	static function throw_nullableValue_shouldFail() {
 		var s:Null<String> = 'hello';
 		shouldFail(throw s);
