@@ -261,12 +261,19 @@ class virtual base_checker ctx =
 				| TReturn None -> ()
 				| TBreak -> ()
 				| TContinue -> ()
-				| TThrow _ -> ()
+				| TThrow expr -> self#check_throw expr e.epos
 				| TCast (expr, _) -> self#check_cast expr e.etype e.epos
 				| TMeta (_, e) -> self#check_expr e
 				| TEnumParameter _ -> ()
 				| TEnumIndex _ -> ()
 				| TIdent _ -> ()
+		(**
+			Don't throw nullable values
+		*)
+		method private check_throw e p =
+			if self#is_nullable_expr e then
+				self#error "Cannot throw nullable value." p;
+			self#check_expr e
 		(**
 			Don't cast nullable expressions to not-nullable types
 		*)

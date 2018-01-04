@@ -226,6 +226,11 @@ class Tests
 	// 	shouldFail(var o:{field:String} = {field:a});
 	// }
 
+	static function throw_nullableValue_shouldFail() {
+		var s:Null<String> = 'hello';
+		shouldFail(throw s);
+	}
+
 	static function cast_nullableExprToNotNullableType_shouldFail() {
 		var s:Null<String> = 'hello';
 		shouldFail((s:String));
