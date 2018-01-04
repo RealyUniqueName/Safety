@@ -85,28 +85,27 @@ let process_condition condition (is_nullable_expr:texpr->bool) callback =
 	Check if specified `path` is mentioned in `-D SAFETY=here`
 *)
 let need_check com path =
-	try
-		let rec find str lst =
-			match lst with
-				| [] -> false
-				| ["ALL"] -> true
-				| current :: rest ->
-					let contains =
-						(String.length str >= String.length current)
-						&& (current = String.sub str 0 (String.length current))
-					in
-					if contains then
-						true
-					else
-						find str rest;
-		and check_list = Str.split (Str.regexp ",") (String.trim (raw_defined_value com "SAFETY"))
-		and str =
-			match path with
-				| ([], name) -> name
-				| (packages, name) -> (String.concat "." packages) ^ "." ^ name
-		in
-		find str check_list
-	with Not_found -> false
+	match path with
+		| ([], "Safety") -> false
+		| (packages, name) ->
+			try
+				let rec find str lst =
+					match lst with
+						| [] -> false
+						| ["ALL"] -> true
+						| current :: rest ->
+							let contains =
+								(String.length str >= String.length current)
+								&& (current = String.sub str 0 (String.length current))
+							in
+							if contains then
+								true
+							else
+								find str rest;
+				and check_list = Str.split (Str.regexp ",") (String.trim (raw_defined_value com "SAFETY"))
+				and path_str = (String.concat "." packages) ^ (if List.length packages = 0 then "" else ".") ^ name in
+				find path_str check_list
+			with Not_found -> false
 
 (**
 	Class to simplify collecting lists of local vars checked against `null`.
@@ -438,7 +437,7 @@ class virtual base_checker ctx =
 										| _ -> ""
 									in
 									let fn_str = if fn_name = "" then "" else " of function \"" ^ fn_name ^ "\""
-									and arg_str = if arg_name = "" then "" else " \" ^ arg_name ^ \"" in
+									and arg_str = if arg_name = "" then "" else " \"" ^ arg_name ^ "\"" in
 									self#error ("Cannont pass nullable value to not-nullable argument" ^ arg_str ^ fn_str ^ ".") a.epos
 								end;
 								self#check_expr a;
