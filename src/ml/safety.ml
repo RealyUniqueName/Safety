@@ -6,7 +6,6 @@ open Common
 open MacroApi
 open Ast
 open Type
-open Globals
 
 type safety_error = {
 	se_msg : string;
@@ -239,13 +238,12 @@ class virtual base_checker ctx =
 		(**
 			Check if `expr` can be passed to a place where `to_type` is expected.
 		*)
-		method private can_pass expr to_type =
+		method private can_pass_expr expr to_type =
 			if self#is_nullable_expr expr && not (is_nullable_type to_type) then
 				false
 			else
-				match expr.eexpr with
-					| TCast (e, _) | TMeta (_, e) -> self#can_pass e to_type
-					| _ -> true
+				true
+				(* can_pass_type expr.etype to_type *)
 		(**
 			Recursively checks an expression
 		*)
@@ -280,8 +278,8 @@ class virtual base_checker ctx =
 				| TThrow expr -> self#check_throw expr e.epos
 				| TCast (expr, _) -> self#check_cast expr e.etype e.epos
 				| TMeta (_, e) -> self#check_expr e
-				| TEnumParameter (e, _, _) -> self#check_expr e
 				| TEnumIndex idx -> self#check_enum_index idx
+				| TEnumParameter (e, _, _) -> self#check_expr e (** Checking enum value itself is not needed here because this expr always follows after TEnumIndex *)
 				| TIdent _ -> ()
 		(**
 			Deal with nullable enum values
@@ -325,7 +323,7 @@ class virtual base_checker ctx =
 			Don't cast nullable expressions to not-nullable types
 		*)
 		method private check_cast expr to_type p =
-			if not (self#can_pass expr to_type) then
+			if not (self#can_pass_expr expr to_type) then
 				self#error "Cannot cast nullable value to not nullable type." p;
 			self#check_expr expr
 		(**
@@ -340,7 +338,7 @@ class virtual base_checker ctx =
 		method private check_return e p =
 			self#check_expr e;
 			match return_types with
-				| t :: _ when not (self#can_pass e t) ->
+				| t :: _ when not (self#can_pass_expr e t) ->
 					self#error "Cannot return nullable value from function with not nullable return type." p
 				| _ -> ()
 		(**
@@ -414,7 +412,7 @@ class virtual base_checker ctx =
 			Don't assign nullable value to not-nullable variable on var declaration
 		*)
 		method private check_var v e p =
-			if not (self#can_pass e v.v_type) then
+			if not (self#can_pass_expr e v.v_type) then
 				self#error "Cannot assign nullable value to not-nullable variable." p;
 			self#check_expr e
 		(**
@@ -437,7 +435,7 @@ class virtual base_checker ctx =
 					let rec traverse args types =
 						match (args, types) with
 							| (a :: args, (arg_name, _, t) :: types) ->
-								if not (self#can_pass a t) then begin
+								if not (self#can_pass_expr a t) then begin
 									let fn_name = match callee.eexpr with
 										| TField (_, access) -> field_name access
 										| TIdent fn_name -> fn_name
