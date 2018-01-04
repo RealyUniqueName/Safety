@@ -273,7 +273,7 @@ class virtual base_checker ctx =
 				| TIf _ -> self#check_if e
 				| TWhile _ -> self#check_while e
 				| TSwitch (target, cases, default) -> self#check_switch target cases default
-				| TTry _ -> ()
+				| TTry (try_block, catches) -> self#check_try try_block catches
 				| TReturn (Some expr) -> self#check_return expr e.epos
 				| TReturn None -> ()
 				| TBreak -> ()
@@ -284,6 +284,12 @@ class virtual base_checker ctx =
 				| TEnumParameter _ -> ()
 				| TEnumIndex _ -> ()
 				| TIdent _ -> ()
+		(**
+			Check try...catch
+		*)
+		method private check_try try_block catches =
+			self#check_expr try_block;
+			List.iter (fun (_, e) -> self#check_expr e) catches
 		(**
 			Don't use nullable value as a condition in `while`
 		*)

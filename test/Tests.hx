@@ -246,6 +246,15 @@ class Tests
 		shouldFail(throw s);
 	}
 
+	static function tryCatch_shouldCheck(?a:String) {
+		var s:String;
+		try {
+			shouldFail(s = a);
+		} catch(e:Dynamic) {
+			shouldFail(s = a);
+		}
+	}
+
 	static function cast_nullableExprToNotNullableType_shouldFail() {
 		var s:Null<String> = 'hello';
 		shouldFail((s:String));
