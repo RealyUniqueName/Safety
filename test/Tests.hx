@@ -209,11 +209,22 @@ class Tests
 	}
 
 	static function return_nullableValueFromNotNullableResult_shouldFail(?a:String):String {
-		shouldFail(return a);
 		function local():String {
 			shouldFail(return a);
 		}
+		shouldFail(return a);
 	}
+
+	static function objectDecl_fieldsExpressions_shouldBeChecked(?a:String) {
+		var s:String;
+		var o = {
+			field: shouldFail(s = a)
+		}
+	}
+
+	// static function objectDecl_passObjWithNullabelFieldToObjWithNotNullableField_shouldFail() {
+
+	// }
 
 	// TODO far far future
 	// static function checkAgainstNull_assignCheckedValueToVarWithoutExplicitType_shouldTypeAsNotNullable() {

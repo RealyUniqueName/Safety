@@ -221,6 +221,16 @@ class virtual base_checker ctx =
 					!nullable
 				| _ -> is_nullable_type e.etype
 		(**
+			Check if `expr` can be passed to a place where `to_type` is expected.
+		*)
+		method private can_pass expr to_type =
+			if self#is_nullable_expr expr && not (is_nullable_type to_type) then
+				false
+			else
+				true
+				(* match expr.eexpr with
+					|  *)
+		(**
 			Recursively checks an expression
 		*)
 		method private check_expr e =
@@ -232,7 +242,7 @@ class virtual base_checker ctx =
 				| TField (target, access) -> self#check_field target access e.epos
 				| TTypeExpr _ -> ()
 				| TParenthesis e -> self#check_expr e
-				| TObjectDecl _ -> ()
+				| TObjectDecl fields -> List.iter (fun (_, e) -> self#check_expr e) fields
 				| TArrayDecl _ -> ()
 				| TCall (callee, args) -> self#check_call callee args
 				| TNew ({ cl_constructor = Some { cf_expr = Some callee } }, _, args) -> self#check_call callee args
