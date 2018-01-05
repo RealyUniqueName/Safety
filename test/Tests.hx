@@ -9,8 +9,18 @@ private enum DummyEnum {
 	DummyTwo(a:Int, ?b:String);
 }
 
+@:build(Validator.checkFields())
 class Tests
 {
+	@:shouldFail var notInitializedField:Int;
+	@:shouldFail var notInitializedProperty(default,null):Float;
+	@:shouldFail @:isVar var notInitializedIsVar(get,set):String;
+	function get_notInitializedIsVar() return notInitializedIsVar;
+	function set_notInitializedIsVar(v) return notInitializedIsVar = v;
+
+	var initialized:Bool = false;
+	var initializedInConstructor:String;
+
 	/**
 	 *  Null safety should work in __init__ functions
 	 */

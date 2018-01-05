@@ -6,12 +6,24 @@ import eval.vm.Context in EvalContext;
 
 class Validator {
 #if macro
-	static var expectedErrors:Array<{method:String, pos:Position}>;
+	static var expectedErrors:Array<{symbol:String, pos:Position}>;
 
 	static public function register() {
 		if(Context.defined('display')) return;
 		Context.onAfterTyping(validate);
 		expectedErrors = [];
+	}
+
+	static public function checkFields():Array<Field> {
+		for(field in Context.getBuildFields()) {
+			for(meta in field.meta) {
+				if(meta.name == ':shouldFail') {
+					expectedErrors.push({symbol: field.name, pos:field.pos});
+					break;
+				}
+			}
+		}
+		return null;
 	}
 
 	static function validate(_) {
@@ -39,7 +51,7 @@ class Validator {
 			Context.warning(error.msg, error.pos);
 		}
 		for(expected in expectedErrors) {
-			Context.warning('Expression was expected to fail, but it did not fail in "${expected.method}".', expected.pos);
+			Context.warning('${expected.symbol} was expected to fail, but it did not fail.', expected.pos);
 		}
 		if(errors.length + expectedErrors.length > 0) {
 			if(!Context.defined('VALIDATOR_DONT_FAIL')) {
@@ -59,7 +71,7 @@ class Validator {
 
 	macro static public function shouldFail(expr:Expr):Expr {
 		if(!Context.defined('display')) {
-			expectedErrors.push({method:Context.getLocalMethod(), pos:expr.pos});
+			expectedErrors.push({symbol:Context.getLocalMethod(), pos:expr.pos});
 		}
 		return expr;
 	}
