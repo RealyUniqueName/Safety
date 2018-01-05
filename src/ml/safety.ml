@@ -31,6 +31,16 @@ let fail ?msg hxpos mlpos =
 			Printf.eprintf "%s:%d\n" file line;
 			assert false
 
+(**
+	If `expr` is a TCast or TMeta, returns underlying expression (recursively bypassing nested casts).
+	Otherwise returns `expr` as is.
+*)
+let rec reveal_expr expr =
+	match expr.eexpr with
+		| TCast (e, _) -> reveal_expr e
+		| TMeta (_, e) -> reveal_expr e
+		| _ -> expr
+
 let accessed_field_name access =
 	match access with
 		| FInstance (_, _, { cf_name = name }) -> name
@@ -55,6 +65,23 @@ let rec is_nullable_type t =
 			is_nullable_type (apply_params t.t_params tl t.t_type)
 		| _ ->
 			false
+
+let rec can_pass_type src dst =
+	if is_nullable_type src && not (is_nullable_type dst) then
+		false
+	else
+		(* TODO *)
+		match dst with
+			| TMono r -> (match !r with None -> true | Some t -> can_pass_type src t)
+			| TEnum (_, params) -> true
+			| TInst _ -> true
+			| TType (t, tl) -> can_pass_type src (apply_params t.t_params tl t.t_type)
+			| TFun _ -> true
+			| TAnon _ -> true
+			| TDynamic _ -> true
+			| TLazy _ -> true
+			| TAbstract ({ a_path = ([],"Null") }, [t]) -> true
+			| TAbstract _ -> true
 
 (**
 	Collect nullable local vars which are checked against `null`.
@@ -259,7 +286,7 @@ class virtual base_checker ctx =
 				| TObjectDecl fields -> List.iter (fun (_, e) -> self#check_expr e) fields
 				| TArrayDecl exprs -> List.iter self#check_expr exprs
 				| TCall (callee, args) -> self#check_call callee args
-				| TNew ({ cl_constructor = Some { cf_expr = Some callee } }, _, args) -> self#check_call callee args
+				| TNew ({ cl_constructor = Some ctor }, _, args) -> self#check_constructor ctor args e.epos
 				| TNew (_, _, args) -> List.iter self#check_expr args
 				| TUnop (_, _, expr) -> self#check_unop expr e.epos
 				| TFunction fn -> self#check_function fn
@@ -423,34 +450,44 @@ class virtual base_checker ctx =
 				self#error ("Cannot access \"" ^ accessed_field_name access ^ "\" of a nullable value.") p;
 			self#check_expr target
 		(**
+			Check constructor invocation: dont' pass nulable values to not-nullable arguments
+		*)
+		method private check_constructor ctor args p =
+			match ctor.cf_type with
+				| TFun (types, _) -> self#check_args args types
+				| _ -> fail ~msg:"Unexpected constructor type." p __POS__
+
+		(**
 			Check calls: don't call a nullable value, dont' pass nulable values to not-nullable arguments
 		*)
-		method check_call callee args =
+		method private check_call callee args =
 			if self#is_nullable_expr callee then
 				self#error "Cannot call a nullable value." callee.epos;
 			self#check_expr callee;
 			List.iter self#check_expr args;
 			match follow callee.etype with
 				| TFun (types, _) ->
-					let rec traverse args types =
-						match (args, types) with
-							| (a :: args, (arg_name, _, t) :: types) ->
-								if not (self#can_pass_expr a t) then begin
-									let fn_name = match callee.eexpr with
-										| TField (_, access) -> field_name access
-										| TIdent fn_name -> fn_name
-										| TLocal { v_name = fn_name } -> fn_name
-										| _ -> ""
-									in
-									let fn_str = if fn_name = "" then "" else " of function \"" ^ fn_name ^ "\""
-									and arg_str = if arg_name = "" then "" else " \"" ^ arg_name ^ "\"" in
-									self#error ("Cannont pass nullable value to not-nullable argument" ^ arg_str ^ fn_str ^ ".") a.epos
-								end;
-								self#check_expr a;
-								traverse args types;
-							| _ -> ()
+					let fn_name = match (reveal_expr callee).eexpr with
+						| TField (_, access) -> field_name access
+						| TIdent fn_name -> fn_name
+						| TLocal { v_name = fn_name } -> fn_name
+						| _ -> ""
 					in
-					traverse args types
+					self#check_args ~callee:fn_name args types
+				| _ -> ()
+		(**
+			Check if specified expressions can be passed to a call which expects `types`.
+		*)
+		method private check_args ?(callee="") args types =
+			match (args, types) with
+				| (a :: args, (arg_name, _, t) :: types) ->
+					if not (self#can_pass_expr a t) then begin
+						let fn_str = if callee = "" then "" else " of function \"" ^ callee ^ "\""
+						and arg_str = if arg_name = "" then "" else " \"" ^ arg_name ^ "\"" in
+						self#error ("Cannot pass nullable value to not-nullable argument" ^ arg_str ^ fn_str ^ ".") a.epos
+					end;
+					self#check_expr a;
+					self#check_args ~callee:callee args types;
 				| _ -> ()
 	end
 
@@ -465,7 +502,7 @@ class class_checker cls ctx =
 				Option.may self#check_expr f.cf_expr
 			in
 			Option.may self#check_expr cls.cl_init;
-			(* Option.may (fun field -> Option.may self#check_expr field.cf_expr) cls.cl_constructor; *)
+			Option.may (fun field -> Option.may self#check_expr field.cf_expr) cls.cl_constructor;
 			List.iter check_field cls.cl_ordered_fields;
 			List.iter check_field cls.cl_ordered_statics;
 	end

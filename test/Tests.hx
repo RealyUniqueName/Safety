@@ -330,4 +330,9 @@ class Tests
 	// 		case v
 	// 	}
 	// }
+
+	// static function abstractOverNul_consideredAsNullable() {
+	// 	var s:String
+	// }
 }
+
