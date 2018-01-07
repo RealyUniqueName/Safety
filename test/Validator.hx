@@ -37,7 +37,7 @@ class Validator {
 
 	static function validate(_) {
 		var errors = check(expectedErrors, Safety.plugin.getErrors(), 'fail');
-		var warnings = check(expectedWarnings, Safety.plugin.getWarnings(), 'warning');
+		var warnings = check(expectedWarnings, Safety.plugin.getWarnings(), 'warn');
 		if(errors.ok && warnings.ok) {
 			Sys.println('${warnings.passed} expected warnings spotted');
 			Sys.println('${errors.passed} expected errors spotted');

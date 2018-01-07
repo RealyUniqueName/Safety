@@ -7,13 +7,14 @@ open MacroApi
 open Ast
 open Type
 
-type safety_error = {
-	se_msg : string;
-	se_pos : pos;
+type safety_message = {
+	sm_msg : string;
+	sm_pos : pos;
 }
 
 type safety_context = {
-	mutable sc_errors : safety_error list;
+	mutable sc_errors : safety_message list;
+	mutable sc_warnings : safety_message list;
 }
 
 (**
@@ -238,10 +239,14 @@ class virtual base_checker ctx =
 			Register an error
 		*)
 		method error msg p =
-			ctx.sc_errors <- { se_msg = msg; se_pos = p; } :: ctx.sc_errors;
+			ctx.sc_errors <- { sm_msg = msg; sm_pos = p; } :: ctx.sc_errors;
 			(* cnt <- cnt + 1;
 			if cnt = 2 then assert false *)
-
+		(**
+			Register an warning
+		*)
+		method warning msg p =
+			ctx.sc_warnings <- { sm_msg = msg; sm_pos = p; } :: ctx.sc_warnings;
 		(**
 			Check if `e` is nullable even if the type is reported not-nullable.
 			Haxe type system lies sometimes.
@@ -509,7 +514,7 @@ class class_checker cls ctx =
 
 class plugin =
 	object (self)
-		val ctx = { sc_errors = [] }
+		val ctx = { sc_errors = []; sc_warnings = [] }
 		(**
 			Plugin API: this method should be executed at initialization macro time
 		*)
@@ -527,7 +532,7 @@ class plugin =
 				in
 				List.iter traverse types;
 				if not (raw_defined com "SAFETY_SILENT") then
-					List.iter (fun err -> com.error err.se_msg err.se_pos) (List.rev ctx.sc_errors);
+					List.iter (fun err -> com.error err.sm_msg err.sm_pos) (List.rev ctx.sc_errors);
 				(* t() *)
 			);
 			(* This is because of vfun0 should return something *)
@@ -536,7 +541,14 @@ class plugin =
 			Plugin API: returns a list of all errors found during safety checks
 		*)
 		method get_errors () =
-			let arr = Array.make (List.length ctx.sc_errors) vnull in
+			self#serialize ctx.sc_errors
+		(**
+			Plugin API: returns a list of all warnings found during safety checks
+		*)
+		method get_warnings () =
+			self#serialize ctx.sc_warnings
+		method private serialize messages =
+			let arr = Array.make (List.length messages) vnull in
 			let set_item idx msg p =
 				let obj = encode_obj_s
 					vnull
@@ -550,11 +562,11 @@ class plugin =
 			let rec traverse idx errors =
 				match errors with
 					| err :: errors ->
-						set_item idx err.se_msg err.se_pos;
+						set_item idx err.sm_msg err.sm_pos;
 						traverse (idx + 1) errors
 					| [] -> ()
 			in
-			traverse 0 (List.rev ctx.sc_errors);
+			traverse 0 (List.rev messages);
 			(* VArray arr *)
 			VArray (EvalArray.create arr)
 	end
@@ -562,4 +574,8 @@ class plugin =
 
 let api = new plugin in
 
-EvalStdLib.StdContext.register [("run", vfun0 api#run); ("getErrors", vfun0 api#get_errors)]
+EvalStdLib.StdContext.register [
+	("run", vfun0 api#run);
+	("getErrors", vfun0 api#get_errors);
+	("getWarnings", vfun0 api#get_warnings)
+]
