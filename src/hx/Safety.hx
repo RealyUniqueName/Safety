@@ -43,10 +43,10 @@ class Safety {
 
 	/**
 	 *  Returns `value` if it is not `null`. Otherwise throws an exception.
-	 *  @throws NullException if `value` is `null`.
+	 *  @throws NullPointerException if `value` is `null`.
 	 */
-	static public inline function safe<T>(value:Null<T>):T {
-		return (value == null ? throw new safety.NullException() : value);
+	static public inline function sure<T>(value:Null<T>):T {
+		return (value == null ? throw new safety.NullPointerException() : value);
 	}
 
 	/**
@@ -54,6 +54,39 @@ class Safety {
 	 */
 	static public inline function unsafe<T>(value:Null<T>):T {
 		return (value:T);
+	}
+
+	/**
+	 *  Applies `callback` to `value` and returns the result if `value` is not `null`.
+	 *  Returns `null` otherwise.
+	 */
+	static public inline function let<T,V>(value:Null<T>, callback:T->V):Null<V> {
+		return (value == null ? null : callback(value));
+	}
+
+	/**
+	 *  Passes `value` to `callback` if `value` is not null.
+	 */
+	static public inline function run<T>(value:Null<T>, callback:T->Void) {
+		if(value == null) callback(value);
+	}
+
+	/**
+	 *  Applies `callback` to `value` if `value` is not `null`.
+	 *  Returns `value`.
+	 */
+	static public inline function apply<T>(value:Null<T>, callback:T->Void):Null<T> {
+		if(value == null) callback(value);
+		return value;
+	}
+
+	/**
+	 *  TODO
+	 *  Elvis operator implementation.
+	 *  Or maybe make it a build macro which transforms postifx `!` operator.
+	 */
+	static public inline function sh<T>(value:Null<T>):T {
+		throw "TODO";
 	}
 #end
 }
