@@ -12,6 +12,7 @@ private enum DummyEnum {
 @:build(Validator.checkFields())
 class Tests
 {
+	@:shouldWarn public var publiclyModifiableField:String = 'hello';
 	@:shouldFail var notInitializedField:Int;
 	@:shouldFail var notInitializedProperty(default,null):Float;
 	@:shouldFail @:isVar var notInitializedIsVar(get,set):String;

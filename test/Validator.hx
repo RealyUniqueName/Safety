@@ -2,16 +2,21 @@
 import haxe.macro.Context;
 import haxe.macro.Expr;
 import eval.vm.Context in EvalContext;
+
+typedef SafetyMessage = {msg:String, pos:Position}
+typedef ExpectedMessage = {symbol:String, pos:Position}
 #end
 
 class Validator {
 #if macro
-	static var expectedErrors:Array<{symbol:String, pos:Position}>;
+	static var expectedErrors:Array<ExpectedMessage>;
+	static var expectedWarnings:Array<ExpectedMessage>;
 
 	static public function register() {
 		if(Context.defined('display')) return;
 		Context.onAfterTyping(validate);
 		expectedErrors = [];
+		expectedWarnings = [];
 	}
 
 	static public function checkFields():Array<Field> {
@@ -21,44 +26,59 @@ class Validator {
 					expectedErrors.push({symbol: field.name, pos:field.pos});
 					break;
 				}
+				if(meta.name == ':shouldWarn') {
+					expectedWarnings.push({symbol: field.name, pos:field.pos});
+					break;
+				}
 			}
 		}
 		return null;
 	}
 
 	static function validate(_) {
-		var totalExpectedErrors = expectedErrors.length;
-		var errors = Safety.plugin.getErrors();
+		var errors = check(expectedErrors, Safety.plugin.getErrors(), 'fail');
+		var warnings = check(expectedWarnings, Safety.plugin.getWarnings(), 'warning');
+		if(errors.ok && warnings.ok) {
+			Sys.println('${warnings.passed} expected warnings spotted');
+			Sys.println('${errors.passed} expected errors spotted');
+			Sys.println('Tests passed.');
+		} else {
+			if(!Context.defined('VALIDATOR_DONT_FAIL')) {
+				Context.error('Tests failed. See warnings.', Context.currentPos());
+			}
+		}
+	}
+
+	static function check(expected:Array<ExpectedMessage>, actual:Array<SafetyMessage>, expectation:String):{ok:Bool, passed:Int} {
+		var passed = 0;
 		var i = 0;
-		while(i < errors.length) {
-			var error = errors[i];
+		while(i < actual.length) {
+			var actualEvent = actual[i];
 			var wasExpected = false;
-			for(expected in expectedErrors) {
-				if(posContains(expected.pos, error.pos)) {
-					expectedErrors.remove(expected);
+			for(expectedEvent in expected) {
+				if(posContains(expectedEvent.pos, actualEvent.pos)) {
+					expected.remove(expectedEvent);
 					wasExpected = true;
 					break;
 				}
 			}
 			if(wasExpected) {
-				errors.remove(error);
+				actual.remove(actualEvent);
+				++passed;
 			} else {
 				++i;
 			}
 		}
 
-		for(error in errors) {
-			Context.warning(error.msg, error.pos);
+		for(event in actual) {
+			Context.warning(event.msg, event.pos);
 		}
-		for(expected in expectedErrors) {
-			Context.warning('${expected.symbol} was expected to fail, but it did not fail.', expected.pos);
+		for(event in expected) {
+			Context.warning('${event.symbol} was expected to $expectation, but it did not $expectation.', event.pos);
 		}
-		if(errors.length + expectedErrors.length > 0) {
-			if(!Context.defined('VALIDATOR_DONT_FAIL')) {
-				Context.error('Tests failed. See warnings.', Context.currentPos());
-			}
-		} else {
-			Sys.println('Tests passed. $totalExpectedErrors expected errors spotted.');
+		return {
+			ok: actual.length == 0 && expected.length == 0,
+			passed: passed
 		}
 	}
 
@@ -72,6 +92,13 @@ class Validator {
 	macro static public function shouldFail(expr:Expr):Expr {
 		if(!Context.defined('display')) {
 			expectedErrors.push({symbol:Context.getLocalMethod(), pos:expr.pos});
+		}
+		return expr;
+	}
+
+	macro static public function shouldWarn(expr:Expr):Expr {
+		if(!Context.defined('display')) {
+			expectedWarnings.push({symbol:Context.getLocalMethod(), pos:expr.pos});
 		}
 		return expr;
 	}
