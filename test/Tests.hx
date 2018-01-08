@@ -222,7 +222,7 @@ class Tests
 		}
 	}
 
-	static function checkAgainstNull_externalCheckHasNoEffectInLoop(?a:String) {
+	static function checkAgainstNull_checkOutsideLoopHasNoEffectInLoop(?a:String) {
 		if(a != null) {
 			for(i in 0...10) {
 				shouldFail(var s:String = a);
@@ -233,52 +233,31 @@ class Tests
 		}
 	}
 
-	// static function checkedAgainstNull_assignedToNotNullInClosure_shouldFail(?a:String) {
-	// 	if(a != null) {
-	// 		function local() {
-	// 			if(a != null) {
-	// 				shouldFail(var s:String = a);
-	// 			}
-	// 		}
-	// 	}
-	// }
+	static function checkedAgainstNull_checkedInClosure_shouldFail(?a:String) {
+		function local() {
+			if(a != null) {
+				shouldFail(var s:String = a);
+			}
+		}
+	}
 
-	// static function checkedAgainstNull_checkedInClosure_shouldPass(?a:String) {
-	// 	function local() {
-	// 		if(a != null) {
-	// 			var s:String = a;
-	// 		}
-	// 	}
-	// }
+	static function checkedAgainstNullAfterClosure_notModifiedInClosure_shouldPass(?a:String) {
+		function local() {
+			var s:String = a.or('hello');
+		}
+		if(a != null) {
+			var s:String = a;
+		}
+	}
 
-	// static function checkedAgainstNull_modifiedToNullableInClosure_shouldFail(?a:String) {
-	// 	if(a != null) {
-	// 		function local() {
-	// 			a = null;
-	// 		}
-	// 		shouldFail(var s:String = a);
-	// 	}
-	// }
-
-	// static function checkedAgainstNullAfterClosure_modifiedToNullableInClosure_shouldFail(?a:String) {
-	// 	function local() {
-	// 		a = null;
-	// 	}
-	// 	if(a != null) {
-	// 		shouldFail(var s:String = a);
-	// 	}
-	// }
-
-	// static function checkedAgainstNull_assignedToNotNullInClosureInLoop_shouldFailBeforeClosure(?a:String) {
-	// 	if(a != null) {
-	// 		for(i in 0...10) {
-	// 			shouldFail(var s:String = a);
-	// 			var fn = function() {
-	// 				a = null;
-	// 			}
-	// 		}
-	// 	}
-	// }
+	static function checkedAgainstNullAfterClosure_modifiedToNullableInClosure_shouldFail(?a:String) {
+		function local() {
+			a = null;
+		}
+		if(a != null) {
+			shouldFail(var s:String = a);
+		}
+	}
 
 	static function checkAgainstNull_complexConditions() {
 		var nullable:Null<String> = 'hello';

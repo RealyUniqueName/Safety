@@ -39,23 +39,23 @@ class Safety {
 	/**
 	 *  Returns `value` if it is not `null`. Otherwise returns `defaultValue.
 	 */
-	static public inline function or<T>(value:Null<T>, defaultValue:T):T {
-		return (value == null ? defaultValue : value);
+	static public function or<T>(value:Null<T>, defaultValue:T):T {
+		return value == null ? defaultValue : value;
 	}
 
 	/**
 	 *  Returns `value` if it is not `null`. Otherwise throws an exception.
 	 *  @throws NullPointerException if `value` is `null`.
 	 */
-	static public inline function sure<T>(value:Null<T>):T {
-		return (value == null ? throw new safety.NullPointerException() : value);
+	static public function sure<T>(value:Null<T>):T {
+		return value == null ? throw new safety.NullPointerException() : value;
 	}
 
 	/**
 	 *  Always returns `value`, but typed as non-nullable. Use at your own risk.
 	 */
-	static public inline function unsafe<T>(value:Null<T>):T {
-		return (value:T);
+	static public function unsafe<T>(value:Null<T>):T {
+		return value;
 	}
 
 	/**
@@ -63,14 +63,14 @@ class Safety {
 	 *  Returns `null` otherwise.
 	 */
 	static public inline function let<T,V>(value:Null<T>, callback:T->V):Null<V> {
-		return (value == null ? null : callback(value));
+		return value == null ? null : callback(unsafe(value));
 	}
 
 	/**
 	 *  Passes `value` to `callback` if `value` is not null.
 	 */
 	static public inline function run<T>(value:Null<T>, callback:T->Void) {
-		if(value == null) callback(value);
+		if(value != null) callback(unsafe(value));
 	}
 
 	/**
@@ -78,7 +78,7 @@ class Safety {
 	 *  Returns `value`.
 	 */
 	static public inline function apply<T>(value:Null<T>, callback:T->Void):Null<T> {
-		if(value == null) callback(value);
+		if(value != null) callback(unsafe(value));
 		return value;
 	}
 

@@ -192,9 +192,11 @@ let traverse_expr e callback =
 (**
 	Each loop or function should have its own scope.
 *)
-class safety_scope (scope_type:scope_type) safe_locals (* never_safe *) =
+class safety_scope (scope_type:scope_type) =
 	object (self)
-		(** List of hash tables of local vars declared in current scope *)
+		val safe_locals = Hashtbl.create 100
+		val never_safe = Hashtbl.create 100
+		(** Local vars declared in current scope *)
 		val declarations = Hashtbl.create 100
 		method get_safe_locals = safe_locals
 		(* method get_never_safe = never_safe *)
@@ -205,14 +207,19 @@ class safety_scope (scope_type:scope_type) safe_locals (* never_safe *) =
 		method declare_var v =
 			Hashtbl.add declarations v.v_id v
 		(**
+			Check if local var was declared in this scope
+		*)
+		method owns_var v =
+			Hashtbl.mem declarations v.v_id
+		(**
 			Check if local variable declared in this scope is guaranteed to not have a `null` value.
 		*)
 		method is_safe local_var =
-			(* not (Hashtbl.mem never_safe local_var.v_id)
-			&& ( *)
+			not (Hashtbl.mem never_safe local_var.v_id)
+			&& (
 				Hashtbl.mem safe_locals local_var.v_id
 				|| not (is_nullable_type local_var.v_type)
-			(* ) *)
+			)
 		(**
 			Add variable to the list of safe locals.
 		*)
@@ -221,10 +228,10 @@ class safety_scope (scope_type:scope_type) safe_locals (* never_safe *) =
 		(**
 			Remove variable from the list of safe locals.
 		*)
-		method remove_from_safety v =
-			Hashtbl.remove safe_locals v.v_id
-			(* if forever then
-				Hashtbl.replace never_safe v.v_id v *)
+		method remove_from_safety ?(forever=false) v =
+			Hashtbl.remove safe_locals v.v_id;
+			if forever then
+				Hashtbl.replace never_safe v.v_id v
 	end
 
 (**
@@ -232,12 +239,12 @@ class safety_scope (scope_type:scope_type) safe_locals (* never_safe *) =
 *)
 class local_vars =
 	object (self)
-		val mutable scopes = [new safety_scope STNormal (Hashtbl.create 100) (* (Hashtbl.create 100) *)]
+		val mutable scopes = [new safety_scope STNormal]
 		(**
 			Drop collected data
 		*)
 		method clear =
-			scopes <- [new safety_scope STNormal (Hashtbl.create 100)]
+			scopes <- [new safety_scope STNormal]
 		(**
 			Get the latest created scope.
 		*)
@@ -248,16 +255,15 @@ class local_vars =
 		(**
 			Should be called upon local function declaration.
 		*)
-		(* method function_declared (fn:tfunc) =
-			let never_safe_locals = self#get_current_scope#get_never_safe in
-			let scope = new safety_scope STClosure (Hashtbl.create 100) (Hashtbl.copy never_safe_locals) in
+		method function_declared (fn:tfunc) =
+			let scope = new safety_scope STClosure in
 			scopes <- scope :: scopes;
-			List.iter (fun (v, _) -> scope#declare_var v) fn.tf_args *)
+			List.iter (fun (v, _) -> scope#declare_var v) fn.tf_args
 		(**
 			Should be called upon entering a loop.
 		*)
 		method loop_declared e =
-			let scope = new safety_scope STLoop (Hashtbl.create 100) (* current#get_never_safe *) in
+			let scope = new safety_scope STLoop in
 			scopes <- scope :: scopes;
 			match e.eexpr with
 				| TFor (v, _, _) -> scope#declare_var v
@@ -280,12 +286,19 @@ class local_vars =
 			Check if local variable is guaranteed to not have a `null` value.
 		*)
 		method is_safe local_var =
-			self#get_current_scope#is_safe local_var
-			(* not (Hashtbl.mem never_safe local_var.v_id)
-			&& (
-				self#get_current_scope#is_safe local_var
-				|| not (is_nullable_type local_var.v_type)
-			) *)
+			let rec traverse scopes =
+				match scopes with
+					| [] -> false
+					| current :: rest ->
+						if current#owns_var local_var then
+							false
+						else if current#get_type = STClosure then
+							true
+						else
+							traverse rest
+			in
+			let captured = traverse scopes in
+			not captured && self#get_current_scope#is_safe local_var
 		(**
 			This method should be called upon passing `while`.
 			It collects locals which are checked against `null` and executes callbacks for expressions with proper statuses of locals.
@@ -346,20 +359,22 @@ class local_vars =
 		*)
 		method handle_assignment is_nullable_expr left_expr (right_expr:texpr) =
 			match (reveal_expr left_expr).eexpr with
-				| TLocal v when self#is_safe v && is_nullable_expr right_expr ->
-					(* let rec traverse (lst:safety_scope list) =
+				| TLocal v when is_nullable_expr right_expr ->
+					let captured = ref false in
+					let rec traverse (lst:safety_scope list) =
 						match lst with
 							| [] -> ()
-							(* | current :: next :: rest when current#get_type = STClosure ->
-								current#remove_from_safety v;
-								next#remove_from_safety ~forever:true v;
-								traverse rest *)
 							| current :: rest ->
-								current#remove_from_safety v;
-								traverse rest
+								if current#owns_var v then
+									current#remove_from_safety ~forever:!captured v
+								else begin
+									captured := current#get_type = STClosure;
+									current#remove_from_safety ~forever:!captured v;
+									traverse rest
+								end
 					in
-					traverse scopes; *)
-					List.iter (fun scope -> scope#remove_from_safety v) scopes
+					traverse scopes
+					(* List.iter (fun scope -> scope#remove_from_safety v) scopes *)
 				| _ -> ()
 	end
 
@@ -417,6 +432,7 @@ class expr_checker report =
 			Should be called for the root expressions of a method or for then initialization expressions of fields.
 		*)
 		method check_root_expr e =
+			(* print_endline (s_expr (fun t -> "_t_") e); *)
 			self#check_expr e;
 			local_safety#clear
 		(**
@@ -452,6 +468,7 @@ class expr_checker report =
 				| TContinue -> ()
 				| TThrow expr -> self#check_throw expr e.epos
 				| TCast (expr, _) -> self#check_cast expr e.etype e.epos
+				| TMeta ((Meta.Custom ":unsafe", _, _), _) -> print_endline "UNSAFE META!"
 				| TMeta (_, e) -> self#check_expr e
 				| TEnumIndex idx -> self#check_enum_index idx
 				| TEnumParameter (e, _, _) -> self#check_expr e (** Checking enum value itself is not needed here because this expr always follows after TEnumIndex *)
@@ -516,10 +533,10 @@ class expr_checker report =
 			Check safety in a function
 		*)
 		method private check_function fn =
-			(* local_safety#function_declared fn; *)
+			local_safety#function_declared fn;
 			return_types <- fn.tf_type :: return_types;
 			self#check_expr fn.tf_expr;
-			(* local_safety#scope_closed *)
+			local_safety#scope_closed
 		(**
 			Don't return nullable values as not-nullable return types.
 		*)
