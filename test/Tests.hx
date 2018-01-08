@@ -215,27 +215,79 @@ class Tests
 		}
 	}
 
-	static function checkAgainstNull_checkedNullableCapturedInClosure(?a:String, ?b:String) {
-		var s:String;
-		if(a != null && b != null) {
-			s = a;
-			s = b;
-			var fn = function() {
-				shouldFail(s = a);
-				if(a != null) {
-					s = a;
-				}
-				shouldFail(s = b);
-				a = null; //modified with nullable expression
-				b = 'hello'; //modified with not-nullable expression
-			}
-			shouldFail(s = a); //`a` could be changed to `null` in closure
-			s = b; //`b` could not be changed to `null` in closure
-		}
+	static function checkedAgainstNull_nullifiedAfterCheck_shouldFail(?a:String) {
 		if(a != null) {
-			shouldFail(s = a); //`a` could be changed to `null` in closure at any time
+			a = null;
+			shouldFail(var s:String = a);
 		}
 	}
+
+	// static function checkAgainstNull_nullifiedInLoop_shouldFailBeforeNullifyingInLoop(?a:String) {
+	// 	if(a != null) {
+	// 		for(i in 0...10) {
+	// 			shouldFail(var s:String = a);
+	// 			a = null;
+	// 			shouldFail(var s:String = a);
+	// 		}
+	// 	}
+	// }
+
+	// static function checkAgainstNullInLoop_nullifiedInLoop_shouldPassWithingCheck(?a:String) {
+	// 	if(a != null) {
+	// 		for(i in 0...10) {
+	// 			if(a != null) var s:String = a;
+	// 			a = null;
+	// 			if(a != null) var s:String = a;
+	// 		}
+	// 	}
+	// }
+
+	// static function checkedAgainstNull_assignedToNotNullInClosure_shouldFail(?a:String) {
+	// 	if(a != null) {
+	// 		function local() {
+	// 			if(a != null) {
+	// 				shouldFail(var s:String = a);
+	// 			}
+	// 		}
+	// 	}
+	// }
+
+	// static function checkedAgainstNull_checkedInClosure_shouldPass(?a:String) {
+	// 	function local() {
+	// 		if(a != null) {
+	// 			var s:String = a;
+	// 		}
+	// 	}
+	// }
+
+	// static function checkedAgainstNull_modifiedToNullableInClosure_shouldFail(?a:String) {
+	// 	if(a != null) {
+	// 		function local() {
+	// 			a = null;
+	// 		}
+	// 		shouldFail(var s:String = a);
+	// 	}
+	// }
+
+	// static function checkedAgainstNullAfterClosure_modifiedToNullableInClosure_shouldFail(?a:String) {
+	// 	function local() {
+	// 		a = null;
+	// 	}
+	// 	if(a != null) {
+	// 		shouldFail(var s:String = a);
+	// 	}
+	// }
+
+	// static function checkedAgainstNull_assignedToNotNullInClosureInLoop_shouldFailBeforeClosure(?a:String) {
+	// 	if(a != null) {
+	// 		for(i in 0...10) {
+	// 			shouldFail(var s:String = a);
+	// 			var fn = function() {
+	// 				a = null;
+	// 			}
+	// 		}
+	// 	}
+	// }
 
 	static function checkAgainstNull_complexConditions() {
 		var nullable:Null<String> = 'hello';

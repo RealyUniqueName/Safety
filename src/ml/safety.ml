@@ -12,10 +12,15 @@ type safety_message = {
 	sm_pos : pos;
 }
 
-type safety_context = {
+type safety_report = {
 	mutable sc_errors : safety_message list;
 	mutable sc_warnings : safety_message list;
 }
+
+type scope_type =
+	| STNormal
+	| STLoop
+	| STClosure
 
 (**
 	Terminates compiler process and prints user-friendly instructions about filing an issue in compiler repo.
@@ -135,61 +140,103 @@ let need_check com path =
 			with Not_found -> false
 
 (**
+	Each loop or function should have its own scope.
+*)
+class safety_scope (scope_type:scope_type) safe_locals (* never_safe *) =
+	object (self)
+		(** List of hash tables of local vars declared in current scope *)
+		val declarations = Hashtbl.create 100
+		method get_safe_locals = safe_locals
+		(* method get_never_safe = never_safe *)
+		method get_type = scope_type
+		(**
+			Should be called for each local var declared
+		*)
+		method declare_var v =
+			Hashtbl.add declarations v.v_id v
+		(**
+			Check if local variable declared in this scope is guaranteed to not have a `null` value.
+		*)
+		method is_safe local_var =
+			(* not (Hashtbl.mem never_safe local_var.v_id)
+			&& ( *)
+				Hashtbl.mem safe_locals local_var.v_id
+				|| not (is_nullable_type local_var.v_type)
+			(* ) *)
+		(**
+			Add variable to the list of safe locals.
+		*)
+		method add_to_safety v =
+			Hashtbl.add safe_locals v.v_id v
+		(**
+			Remove variable from the list of safe locals.
+		*)
+		method remove_from_safety ?(forever=true) v =
+			Hashtbl.remove safe_locals v.v_id
+			(* if forever then
+				Hashtbl.replace never_safe v.v_id v *)
+	end
+
+(**
 	Class to simplify collecting lists of local vars checked against `null`.
 *)
 class local_vars =
 	object (self)
-		(** Hashtbl to collect local vars which are checked against `null` and are not nulls. *)
-		val safe_locals = Hashtbl.create 100
-		(** List of hash tables of local vars declared in functions *)
-		val mutable declarations = [Hashtbl.create 100]
-		(** List of local variables captured and modified to nullable values in closures *)
-		val never_safe = Hashtbl.create 100
-		(** Drop collected data *)
-		method clear =
-			Hashtbl.clear safe_locals;
-			Hashtbl.clear never_safe;
-			declarations <- [Hashtbl.create 100]
+		val mutable scopes = [new safety_scope STNormal (Hashtbl.create 100) (* (Hashtbl.create 100) *)]
 		(**
-			Get the list of local vars, which are guaranteed to not have `null` at this moment.
+			Drop collected data
 		*)
-		method get_safe_locals = safe_locals
+		method clear =
+			scopes <- [new safety_scope STNormal (Hashtbl.create 100)]
+		(**
+			Get the latest created scope.
+		*)
+		method private get_current_scope =
+			match scopes with
+				| current :: _-> current
+				| [] -> fail ~msg:"List of scopes should never end." null_pos __POS__
 		(**
 			Should be called upon local function declaration.
 		*)
-		method function_declared (fn:tfunc) =
-			declarations <- Hashtbl.create 100 :: declarations;
-			List.iter (fun (v, _) -> self#declare_var v) fn.tf_args
+		(* method function_declared (fn:tfunc) =
+			let never_safe_locals = self#get_current_scope#get_never_safe in
+			let scope = new safety_scope STClosure (Hashtbl.create 100) (Hashtbl.copy never_safe_locals) in
+			scopes <- scope :: scopes;
+			List.iter (fun (v, _) -> scope#declare_var v) fn.tf_args *)
+		(**
+			Should be called upon entering a loop.
+		*)
+		method loop_declared e =
+			let current = self#get_current_scope in
+			let scope = new safety_scope STLoop current#get_safe_locals (* current#get_never_safe *) in
+			scopes <- scope :: scopes;
+			match e.eexpr with
+				| TFor (v, _, _) -> scope#declare_var v
+				| TWhile _ -> ()
+				| _ -> fail ~msg:"Expected TFor or TWhile." e.epos __POS__
 		(**
 			Should be called upon leaving local function declaration.
 		*)
-		method function_ended =
-			match declarations with
-				| [] -> ()
-				| _ :: rest -> declarations <- rest
+		method scope_closed =
+			match scopes with
+				| [] -> fail ~msg:"No scopes left." null_pos __POS__
+				| [scope] -> fail ~msg:"Cannot close the last scope." null_pos __POS__
+				| _ :: rest -> scopes <- rest
 		(**
 			Should be called for each local var declared
 		*)
 		method declare_var (v:tvar) =
-			match declarations with
-				| [] -> ()
-				| current :: _ -> Hashtbl.add current v.v_id v
+			self#get_current_scope#declare_var v
 		(**
 			Check if local variable is guaranteed to not have a `null` value.
 		*)
 		method is_safe local_var =
-			not (Hashtbl.mem never_safe local_var.v_id)
+			self#get_current_scope#is_safe local_var
+			(* not (Hashtbl.mem never_safe local_var.v_id)
 			&& (
-				Hashtbl.mem safe_locals local_var.v_id
+				self#get_current_scope#is_safe local_var
 				|| not (is_nullable_type local_var.v_type)
-			)
-		(**
-			Check if local variable was declared in current function.
-		*)
-		method is_declared_in_current_function v =
-			match declarations with
-				| current :: _ -> Hashtbl.mem current v.v_id
-				| [] -> false
+			) *)
 		(**
 			This method should be called upon passing `while`.
 			It collects locals which are checked against `null` and executes callbacks for expressions with proper statuses of locals.
@@ -203,9 +250,9 @@ class local_vars =
 					condition_callback condition;
 					let (nulls, not_nulls) = process_condition condition is_nullable_expr (fun _ -> ()) in
 					(** execute `body` with known not-null variables *)
-					self#add_to_safety not_nulls;
+					List.iter self#get_current_scope#add_to_safety not_nulls;
 					body_callback body;
-					self#remove_from_safety not_nulls;
+					List.iter self#get_current_scope#remove_from_safety not_nulls;
 				| _ -> fail ~msg:"Expected TWhile" expr.epos __POS__
 		(**
 			This method should be called upon passing `if`.
@@ -217,16 +264,16 @@ class local_vars =
 					condition_callback condition;
 					let (nulls, not_nulls) = process_condition condition is_nullable_expr (fun _ -> ()) in
 					(** execute `if_body` with known not-null variables *)
-					self#add_to_safety not_nulls;
+					List.iter self#get_current_scope#add_to_safety not_nulls;
 					body_callback if_body;
-					self#remove_from_safety not_nulls;
+					List.iter self#get_current_scope#remove_from_safety not_nulls;
 					(** execute `else_body` with known not-null variables *)
 					(match else_body with
 						| None -> ()
 						| Some else_body ->
-							self#add_to_safety nulls;
+							List.iter self#get_current_scope#add_to_safety nulls;
 							body_callback else_body;
-							self#remove_from_safety nulls
+							List.iter self#get_current_scope#remove_from_safety nulls
 					)
 				| _ -> fail ~msg:"Expected TIf" expr.epos __POS__
 		(**
@@ -234,55 +281,42 @@ class local_vars =
 		*)
 		method process_and left_expr right_expr is_nullable_expr (callback:texpr->unit) =
 			let (_, not_nulls) = process_condition left_expr is_nullable_expr callback in
-			self#add_to_safety not_nulls;
+			List.iter self#get_current_scope#add_to_safety not_nulls;
 			callback right_expr;
-			self#remove_from_safety not_nulls
+			List.iter self#get_current_scope#remove_from_safety not_nulls
 		(**
 			Handle boolean OR outside of `if` condition.
 		*)
 		method process_or left_expr right_expr is_nullable_expr (callback:texpr->unit) =
 			let (nulls, _) = process_condition left_expr is_nullable_expr callback in
-			self#add_to_safety nulls;
+			List.iter self#get_current_scope#add_to_safety nulls;
 			callback right_expr;
-			self#remove_from_safety nulls
+			List.iter self#get_current_scope#remove_from_safety nulls
 		(**
-			Remove local war from safety list if a nullable value is assigned to that var
+			Remove local var from safety list if a nullable value is assigned to that var
 		*)
 		method handle_assignment is_nullable_expr left_expr (right_expr:texpr) =
 			match (reveal_expr left_expr).eexpr with
 				| TLocal v when self#is_safe v && is_nullable_expr right_expr ->
-					self#remove_from_safety [v];
-					let banish v = Hashtbl.replace never_safe v.v_id v in
-					(match declarations with
-						| current :: _ when not (Hashtbl.mem current v.v_id) -> banish v
-						| [] -> banish v
-						| _ -> ()
-					)
+					let rec traverse (lst:safety_scope list) =
+						match lst with
+							| [] -> ()
+							(* | current :: next :: rest when current#get_type = STClosure ->
+								current#remove_from_safety v;
+								next#remove_from_safety ~forever:true v;
+								traverse rest *)
+							| current :: rest ->
+								current#remove_from_safety v;
+								traverse rest
+					in
+					traverse scopes;
 				| _ -> ()
-		(**
-			Add variables to the list of safe locals.
-		*)
-		method private add_to_safety locals =
-			match locals with
-				| [] -> ()
-				| v :: rest ->
-					Hashtbl.replace safe_locals v.v_id v;
-					self#add_to_safety rest
-		(**
-			Remove variables from the list of safe locals.
-		*)
-		method private remove_from_safety locals =
-			match locals with
-				| [] -> ()
-				| v :: rest ->
-					Hashtbl.remove safe_locals v.v_id;
-					self#remove_from_safety rest
 	end
 
 (**
 	This is a base class is used to recursively check typed expressions for null-safety
 *)
-class expr_checker ctx =
+class expr_checker report =
 	object (self)
 		val local_safety = new local_vars
 		val mutable return_types = []
@@ -292,14 +326,14 @@ class expr_checker ctx =
 			Register an error
 		*)
 		method error msg p =
-			ctx.sc_errors <- { sm_msg = msg; sm_pos = p; } :: ctx.sc_errors;
+			report.sc_errors <- { sm_msg = msg; sm_pos = p; } :: report.sc_errors;
 			(* cnt <- cnt + 1;
 			if cnt = 2 then assert false *)
 		(**
 			Register an warning
 		*)
 		method warning msg p =
-			ctx.sc_warnings <- { sm_msg = msg; sm_pos = p; } :: ctx.sc_warnings;
+			report.sc_warnings <- { sm_msg = msg; sm_pos = p; } :: report.sc_warnings;
 		(**
 			Check if `e` is nullable even if the type is reported not-nullable.
 			Haxe type system lies sometimes.
@@ -421,10 +455,10 @@ class expr_checker ctx =
 			Check safety in a function
 		*)
 		method private check_function fn =
-			local_safety#function_declared fn;
+			(* local_safety#function_declared fn; *)
 			return_types <- fn.tf_type :: return_types;
 			self#check_expr fn.tf_expr;
-			local_safety#function_ended
+			(* local_safety#scope_closed *)
 		(**
 			Don't return nullable values as not-nullable return types.
 		*)
@@ -560,9 +594,9 @@ class expr_checker ctx =
 				| _ -> ()
 	end
 
-class class_checker cls ctx =
+class class_checker cls report =
 	object (self)
-			val checker = new expr_checker ctx
+			val checker = new expr_checker report
 		(**
 			Entry point for checking a class
 		*)
@@ -578,7 +612,7 @@ class class_checker cls ctx =
 
 class plugin =
 	object (self)
-		val ctx = { sc_errors = []; sc_warnings = [] }
+		val report = { sc_errors = []; sc_warnings = [] }
 		(**
 			Plugin API: this method should be executed at initialization macro time
 		*)
@@ -592,11 +626,11 @@ class plugin =
 						| TTypeDecl typedef -> ()
 						| TAbstractDecl abstr -> ()
 						| TClassDecl { cl_path = path } when not (need_check com path) -> ()
-						| TClassDecl cls -> (new class_checker cls ctx)#check
+						| TClassDecl cls -> (new class_checker cls report)#check
 				in
 				List.iter traverse types;
 				if not (raw_defined com "SAFETY_SILENT") then
-					List.iter (fun err -> com.error err.sm_msg err.sm_pos) (List.rev ctx.sc_errors);
+					List.iter (fun err -> com.error err.sm_msg err.sm_pos) (List.rev report.sc_errors);
 				(* t() *)
 			);
 			(* This is because of vfun0 should return something *)
@@ -605,12 +639,12 @@ class plugin =
 			Plugin API: returns a list of all errors found during safety checks
 		*)
 		method get_errors () =
-			self#serialize ctx.sc_errors
+			self#serialize report.sc_errors
 		(**
 			Plugin API: returns a list of all warnings found during safety checks
 		*)
 		method get_warnings () =
-			self#serialize ctx.sc_warnings
+			self#serialize report.sc_warnings
 		method private serialize messages =
 			let arr = Array.make (List.length messages) vnull in
 			let set_item idx msg p =
