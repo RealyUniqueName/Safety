@@ -181,6 +181,18 @@ class Tests
 		}
 	}
 
+	static function checkAgainstNull_safeNullableLocalToNotNullableAfterModification(?a:String) {
+		var s:String;
+		if(a != null) {
+			a = 'hello'; //not nullable expr
+			s = a;
+			if(Std.random(2) > 0) {
+				a = ('world':Null<String>); //nullable expr
+			}
+			shouldFail(s = a);
+		}
+	}
+
 	static function checkAgainstNull_checkAndFieldAccess(?a:String) {
 		var s:Null<String> = 'hello';
 		if(s != null && s.length == 0) {}
@@ -202,6 +214,19 @@ class Tests
 			shouldFail(s = nullable);
 		}
 	}
+
+	// static function checkAgainstNull_checkedNullableCapturedInClosure_shouldFail(?a:String, ?b:String) {
+	// 	var s:String;
+	// 	if(a != null && b != null) {
+	// 		var fn = function() {
+	// 			shouldFail(s = a);
+	// 			a = null;
+	// 			shouldFail(s = b);
+	// 		}
+	// 		shouldFail(s = a); //a could be changed in closure
+	// 		s = b; //b could not be changed in closure
+	// 	}
+	// }
 
 	static function checkAgainstNull_complexConditions() {
 		var nullable:Null<String> = 'hello';

@@ -204,13 +204,20 @@ class local_vars =
 			callback right_expr;
 			self#remove_from_safety nulls
 		(**
+			Remove local war from safety list if a nullable value is assigned to that var
+		*)
+		method handle_assignment is_nullable_expr left_expr (right_expr:texpr) =
+			match (reveal_expr left_expr).eexpr with
+				| TLocal v when self#is_safe v && is_nullable_expr right_expr -> self#remove_from_safety [v]
+				| _ -> ()
+		(**
 			Add variables to the list of safe locals.
 		*)
 		method private add_to_safety locals =
 			match locals with
 				| [] -> ()
 				| v :: rest ->
-					Hashtbl.add safe_locals v.v_id v;
+					Hashtbl.replace safe_locals v.v_id v;
 					self#add_to_safety rest
 		(**
 			Remove variables from the list of safe locals.
@@ -426,8 +433,10 @@ class virtual base_checker ctx =
 				| OpBoolOr ->
 					local_safety#process_or left_expr right_expr self#is_nullable_expr self#check_expr
 				| OpAssign ->
-					if not (self#is_nullable_expr left_expr) && self#is_nullable_expr right_expr then
-						self#error "Cannot assign nullable value to not-nullable acceptor." p;
+					if not (self#can_pass_expr right_expr left_expr.etype) then
+						self#error "Cannot assign nullable value to not-nullable acceptor." p
+					else
+						local_safety#handle_assignment self#is_nullable_expr left_expr right_expr;
 					check_both()
 				| _->
 					if self#is_nullable_expr left_expr || self#is_nullable_expr right_expr then
@@ -504,6 +513,7 @@ class class_checker cls ctx =
 		*)
 		method check =
 			let check_field f =
+
 				Option.may self#check_expr f.cf_expr
 			in
 			Option.may self#check_expr cls.cl_init;
