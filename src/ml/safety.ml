@@ -140,14 +140,56 @@ let need_check com path =
 class local_vars =
 	object (self)
 		(** Hashtbl to collect local vars which are checked against `null` and are not nulls. *)
-		val mutable safe_locals = Hashtbl.create 100
+		val safe_locals = Hashtbl.create 100
+		(** List of hash tables of local vars declared in functions *)
+		val mutable declarations = [Hashtbl.create 100]
+		(** List of local variables captured and modified to nullable values in closures *)
+		val never_safe = Hashtbl.create 100
+		(** Drop collected data *)
+		method clear =
+			Hashtbl.clear safe_locals;
+			Hashtbl.clear never_safe;
+			declarations <- [Hashtbl.create 100]
+		(**
+			Get the list of local vars, which are guaranteed to not have `null` at this moment.
+		*)
 		method get_safe_locals = safe_locals
+		(**
+			Should be called upon local function declaration.
+		*)
+		method function_declared (fn:tfunc) =
+			declarations <- Hashtbl.create 100 :: declarations;
+			List.iter (fun (v, _) -> self#declare_var v) fn.tf_args
+		(**
+			Should be called upon leaving local function declaration.
+		*)
+		method function_ended =
+			match declarations with
+				| [] -> ()
+				| _ :: rest -> declarations <- rest
+		(**
+			Should be called for each local var declared
+		*)
+		method declare_var (v:tvar) =
+			match declarations with
+				| [] -> ()
+				| current :: _ -> Hashtbl.add current v.v_id v
 		(**
 			Check if local variable is guaranteed to not have a `null` value.
 		*)
 		method is_safe local_var =
-			Hashtbl.mem safe_locals local_var.v_id
-			|| not (is_nullable_type local_var.v_type)
+			not (Hashtbl.mem never_safe local_var.v_id)
+			&& (
+				Hashtbl.mem safe_locals local_var.v_id
+				|| not (is_nullable_type local_var.v_type)
+			)
+		(**
+			Check if local variable was declared in current function.
+		*)
+		method is_declared_in_current_function v =
+			match declarations with
+				| current :: _ -> Hashtbl.mem current v.v_id
+				| [] -> false
 		(**
 			This method should be called upon passing `while`.
 			It collects locals which are checked against `null` and executes callbacks for expressions with proper statuses of locals.
@@ -208,7 +250,14 @@ class local_vars =
 		*)
 		method handle_assignment is_nullable_expr left_expr (right_expr:texpr) =
 			match (reveal_expr left_expr).eexpr with
-				| TLocal v when self#is_safe v && is_nullable_expr right_expr -> self#remove_from_safety [v]
+				| TLocal v when self#is_safe v && is_nullable_expr right_expr ->
+					self#remove_from_safety [v];
+					let banish v = Hashtbl.replace never_safe v.v_id v in
+					(match declarations with
+						| current :: _ when not (Hashtbl.mem current v.v_id) -> banish v
+						| [] -> banish v
+						| _ -> ()
+					)
 				| _ -> ()
 		(**
 			Add variables to the list of safe locals.
@@ -233,15 +282,12 @@ class local_vars =
 (**
 	This is a base class is used to recursively check typed expressions for null-safety
 *)
-class virtual base_checker ctx =
+class expr_checker ctx =
 	object (self)
 		val local_safety = new local_vars
 		val mutable return_types = []
+		val mutable in_closure = false
 		(* val mutable cnt = 0 *)
-		(**
-			Entry point for checking a all expression in current type
-		*)
-		method virtual check : unit
 		(**
 			Register an error
 		*)
@@ -283,6 +329,12 @@ class virtual base_checker ctx =
 			else
 				true
 				(* can_pass_type expr.etype to_type *)
+		(**
+			Should be called for the root expressions of a method or for then initialization expressions of fields.
+		*)
+		method check_root_expr e =
+			self#check_expr e;
+			local_safety#clear
 		(**
 			Recursively checks an expression
 		*)
@@ -369,8 +421,10 @@ class virtual base_checker ctx =
 			Check safety in a function
 		*)
 		method private check_function fn =
+			local_safety#function_declared fn;
 			return_types <- fn.tf_type :: return_types;
-			self#check_expr fn.tf_expr
+			self#check_expr fn.tf_expr;
+			local_safety#function_ended
 		(**
 			Don't return nullable values as not-nullable return types.
 		*)
@@ -453,6 +507,7 @@ class virtual base_checker ctx =
 			Don't assign nullable value to not-nullable variable on var declaration
 		*)
 		method private check_var v e p =
+			local_safety#declare_var v;
 			if not (self#can_pass_expr e v.v_type) then
 				self#error "Cannot assign nullable value to not-nullable variable." p;
 			self#check_expr e
@@ -507,17 +562,16 @@ class virtual base_checker ctx =
 
 class class_checker cls ctx =
 	object (self)
-			inherit base_checker ctx
+			val checker = new expr_checker ctx
 		(**
 			Entry point for checking a class
 		*)
 		method check =
 			let check_field f =
-
-				Option.may self#check_expr f.cf_expr
+				Option.may checker#check_root_expr f.cf_expr
 			in
-			Option.may self#check_expr cls.cl_init;
-			Option.may (fun field -> Option.may self#check_expr field.cf_expr) cls.cl_constructor;
+			Option.may checker#check_root_expr cls.cl_init;
+			Option.may (fun field -> Option.may checker#check_root_expr field.cf_expr) cls.cl_constructor;
 			List.iter check_field cls.cl_ordered_fields;
 			List.iter check_field cls.cl_ordered_statics;
 	end

@@ -12,15 +12,15 @@ private enum DummyEnum {
 @:build(Validator.checkFields())
 class Tests
 {
-	@:shouldWarn public var publiclyModifiableField:String = 'hello';
-	@:shouldFail var notInitializedField:Int;
-	@:shouldFail var notInitializedProperty(default,null):Float;
-	@:shouldFail @:isVar var notInitializedIsVar(get,set):String;
-	function get_notInitializedIsVar() return notInitializedIsVar;
-	function set_notInitializedIsVar(v) return notInitializedIsVar = v;
+	// @:shouldWarn public var publiclyModifiableField:String = 'hello';
+	// @:shouldFail var notInitializedField:Int;
+	// @:shouldFail var notInitializedProperty(default,null):Float;
+	// @:shouldFail @:isVar var notInitializedIsVar(get,set):String;
+	// function get_notInitializedIsVar() return notInitializedIsVar;
+	// function set_notInitializedIsVar(v) return notInitializedIsVar = v;
 
-	var initialized:Bool = false;
-	var initializedInConstructor:String;
+	// var initialized:Bool = false;
+	// var initializedInConstructor:String;
 
 	/**
 	 *  Null safety should work in __init__ functions
@@ -215,18 +215,27 @@ class Tests
 		}
 	}
 
-	// static function checkAgainstNull_checkedNullableCapturedInClosure_shouldFail(?a:String, ?b:String) {
-	// 	var s:String;
-	// 	if(a != null && b != null) {
-	// 		var fn = function() {
-	// 			shouldFail(s = a);
-	// 			a = null;
-	// 			shouldFail(s = b);
-	// 		}
-	// 		shouldFail(s = a); //a could be changed in closure
-	// 		s = b; //b could not be changed in closure
-	// 	}
-	// }
+	static function checkAgainstNull_checkedNullableCapturedInClosure(?a:String, ?b:String) {
+		var s:String;
+		if(a != null && b != null) {
+			s = a;
+			s = b;
+			var fn = function() {
+				shouldFail(s = a);
+				if(a != null) {
+					s = a;
+				}
+				shouldFail(s = b);
+				a = null; //modified with nullable expression
+				b = 'hello'; //modified with not-nullable expression
+			}
+			shouldFail(s = a); //`a` could be changed to `null` in closure
+			s = b; //`b` could not be changed to `null` in closure
+		}
+		if(a != null) {
+			shouldFail(s = a); //`a` could be changed to `null` in closure at any time
+		}
+	}
 
 	static function checkAgainstNull_complexConditions() {
 		var nullable:Null<String> = 'hello';
@@ -263,6 +272,7 @@ class Tests
 		}
 	}
 
+	// TODO
 	// static function objectDecl_passObjWithNullabelFieldToObjWithNotNullableField_shouldFail(?a:String) {
 	// 	shouldFail(var o:{field:String} = {field:a});
 	// }
