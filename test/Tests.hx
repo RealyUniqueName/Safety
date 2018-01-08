@@ -222,25 +222,16 @@ class Tests
 		}
 	}
 
-	// static function checkAgainstNull_nullifiedInLoop_shouldFailBeforeNullifyingInLoop(?a:String) {
-	// 	if(a != null) {
-	// 		for(i in 0...10) {
-	// 			shouldFail(var s:String = a);
-	// 			a = null;
-	// 			shouldFail(var s:String = a);
-	// 		}
-	// 	}
-	// }
-
-	// static function checkAgainstNullInLoop_nullifiedInLoop_shouldPassWithingCheck(?a:String) {
-	// 	if(a != null) {
-	// 		for(i in 0...10) {
-	// 			if(a != null) var s:String = a;
-	// 			a = null;
-	// 			if(a != null) var s:String = a;
-	// 		}
-	// 	}
-	// }
+	static function checkAgainstNull_externalCheckHasNoEffectInLoop(?a:String) {
+		if(a != null) {
+			for(i in 0...10) {
+				shouldFail(var s:String = a);
+				if(a != null) {
+					var s:String = a;
+				}
+			}
+		}
+	}
 
 	// static function checkedAgainstNull_assignedToNotNullInClosure_shouldFail(?a:String) {
 	// 	if(a != null) {

@@ -140,6 +140,56 @@ let need_check com path =
 			with Not_found -> false
 
 (**
+	Walk through all sub-expression of `e`
+*)
+let traverse_expr e callback =
+	match e.eexpr with
+		| TObjectDecl fields ->
+			List.iter (fun (_, e) -> callback e) fields
+		| TCall (callee, args) ->
+			callback callee;
+			List.iter callback args
+		| TIf (condition, if_body, else_body) ->
+			callback condition;
+			callback if_body;
+			Option.may callback else_body
+		| TSwitch (target, cases, default) ->
+			callback target;
+			List.iter
+				(fun (body, condition) ->
+					callback condition;
+					List.iter callback body
+				)
+				cases;
+			Option.may callback default
+		| TTry (try_block, catches) ->
+			callback try_block;
+			List.iter (fun (_, body) -> callback body) catches
+		| TNew (_, _, exprs)
+		| TBlock exprs
+		| TArrayDecl exprs ->
+			List.iter callback exprs
+		| TWhile (e1, e2, _)
+		| TArray (e1, e2)
+		| TBinop (_, e1, e2)
+		| TFor (_, e1, e2) ->
+			callback e1;
+			callback e2
+		| TField (e, _)
+		| TParenthesis e
+		| TUnop (_, _, e)
+		| TFunction { tf_expr = e }
+		| TVar (_, Some e)
+		| TReturn (Some e)
+		| TThrow e
+		| TCast (e, _)
+		| TMeta (_, e)
+		| TEnumIndex e
+		| TEnumParameter (e, _, _) ->
+			callback e
+		| TConst _ | TLocal _ | TTypeExpr _ | TVar (_, None) | TReturn None | TBreak | TContinue | TIdent _ -> ()
+
+(**
 	Each loop or function should have its own scope.
 *)
 class safety_scope (scope_type:scope_type) safe_locals (* never_safe *) =
@@ -171,7 +221,7 @@ class safety_scope (scope_type:scope_type) safe_locals (* never_safe *) =
 		(**
 			Remove variable from the list of safe locals.
 		*)
-		method remove_from_safety ?(forever=true) v =
+		method remove_from_safety v =
 			Hashtbl.remove safe_locals v.v_id
 			(* if forever then
 				Hashtbl.replace never_safe v.v_id v *)
@@ -207,8 +257,7 @@ class local_vars =
 			Should be called upon entering a loop.
 		*)
 		method loop_declared e =
-			let current = self#get_current_scope in
-			let scope = new safety_scope STLoop current#get_safe_locals (* current#get_never_safe *) in
+			let scope = new safety_scope STLoop (Hashtbl.create 100) (* current#get_never_safe *) in
 			scopes <- scope :: scopes;
 			match e.eexpr with
 				| TFor (v, _, _) -> scope#declare_var v
@@ -298,7 +347,7 @@ class local_vars =
 		method handle_assignment is_nullable_expr left_expr (right_expr:texpr) =
 			match (reveal_expr left_expr).eexpr with
 				| TLocal v when self#is_safe v && is_nullable_expr right_expr ->
-					let rec traverse (lst:safety_scope list) =
+					(* let rec traverse (lst:safety_scope list) =
 						match lst with
 							| [] -> ()
 							(* | current :: next :: rest when current#get_type = STClosure ->
@@ -309,7 +358,8 @@ class local_vars =
 								current#remove_from_safety v;
 								traverse rest
 					in
-					traverse scopes;
+					traverse scopes; *)
+					List.iter (fun scope -> scope#remove_from_safety v) scopes
 				| _ -> ()
 	end
 
@@ -391,7 +441,7 @@ class expr_checker report =
 				| TVar (v, Some init_expr) -> self#check_var v init_expr e.epos
 				| TVar (_, None) -> ()
 				| TBlock exprs -> List.iter self#check_expr exprs
-				| TFor (_, iterable, body) -> self#check_for iterable body
+				| TFor _ -> self#check_for e
 				| TIf _ -> self#check_if e
 				| TWhile _ -> self#check_while e
 				| TSwitch (target, cases, default) -> self#check_switch target cases default
@@ -423,20 +473,31 @@ class expr_checker report =
 			Don't use nullable value as a condition in `while`
 		*)
 		method private check_while e =
-			let check_condition e =
-				if self#is_nullable_expr e then
-					self#error "Cannot use nullable value as condition in \"while\"." e.epos;
-				self#check_expr e
-			in
-			local_safety#process_while e self#is_nullable_expr check_condition self#check_expr
+			match e.eexpr with
+				| TWhile _ ->
+					let check_condition condition =
+						if self#is_nullable_expr condition then
+							self#error "Cannot use nullable value as condition in \"while\"." condition.epos;
+						self#check_expr condition
+					in
+					local_safety#loop_declared e;
+					local_safety#process_while e self#is_nullable_expr check_condition self#check_expr;
+					local_safety#scope_closed
+				| _ -> fail ~msg:"Expected TWhile." e.epos __POS__
 		(**
 			Don't iterate on nullable values
 		*)
-		method private check_for iterable body =
-			if self#is_nullable_expr iterable then
-				self#error "Cannot iterate over nullable value." iterable.epos;
-			self#check_expr iterable;
-			self#check_expr body
+		method private check_for e =
+			match e.eexpr with
+				| TFor (v, iterable, body) ->
+					if self#is_nullable_expr iterable then
+						self#error "Cannot iterate over nullable value." iterable.epos;
+					self#check_expr iterable;
+					local_safety#declare_var v;
+					local_safety#loop_declared e;
+					self#check_expr body;
+					local_safety#scope_closed
+				| _ -> fail ~msg:"Expected TFor." e.epos __POS__
 		(**
 			Don't throw nullable values
 		*)
