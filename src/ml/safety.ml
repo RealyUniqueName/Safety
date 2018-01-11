@@ -149,56 +149,6 @@ let should_be_initialized field =
 		| _ -> false
 
 (**
-	Walk through all sub-expression of `e`
-*)
-(* let traverse_expr e callback =
-	match e.eexpr with
-		| TObjectDecl fields ->
-			List.iter (fun (_, e) -> callback e) fields
-		| TCall (callee, args) ->
-			callback callee;
-			List.iter callback args
-		| TIf (condition, if_body, else_body) ->
-			callback condition;
-			callback if_body;
-			Option.may callback else_body
-		| TSwitch (target, cases, default) ->
-			callback target;
-			List.iter
-				(fun (body, condition) ->
-					callback condition;
-					List.iter callback body
-				)
-				cases;
-			Option.may callback default
-		| TTry (try_block, catches) ->
-			callback try_block;
-			List.iter (fun (_, body) -> callback body) catches
-		| TNew (_, _, exprs)
-		| TBlock exprs
-		| TArrayDecl exprs ->
-			List.iter callback exprs
-		| TWhile (e1, e2, _)
-		| TArray (e1, e2)
-		| TBinop (_, e1, e2)
-		| TFor (_, e1, e2) ->
-			callback e1;
-			callback e2
-		| TField (e, _)
-		| TParenthesis e
-		| TUnop (_, _, e)
-		| TFunction { tf_expr = e }
-		| TVar (_, Some e)
-		| TReturn (Some e)
-		| TThrow e
-		| TCast (e, _)
-		| TMeta (_, e)
-		| TEnumIndex e
-		| TEnumParameter (e, _, _) ->
-			callback e
-		| TConst _ | TLocal _ | TTypeExpr _ | TVar (_, None) | TReturn None | TBreak | TContinue | TIdent _ -> () *)
-
-(**
 	Each loop or function should have its own scope.
 *)
 class safety_scope (scope_type:scope_type) =
@@ -772,7 +722,6 @@ class class_checker cls report =
 						Hashtbl.mem initialized_in_constructor field.cf_name
 					| _ -> false
 			end
-
 	end
 
 class plugin =
