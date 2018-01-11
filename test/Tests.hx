@@ -20,7 +20,9 @@ class Tests
 	function set_notInitializedIsVar(v) return notInitializedIsVar = v;
 
 	var initialized:Bool = false;
-	// var initializedInConstructor:String;
+	var initializedInConstructor:String;
+	var initializedInAllBranchesOfConstructor:String;
+	@:shouldFail var initializedInSomeBranchesOfConstructor:String;
 
 	/**
 	 *  Null safety should work in __init__ functions
@@ -36,7 +38,13 @@ class Tests
 	function new(a:String) {
 		var s:Null<String> = 'hello';
 		shouldFail(s.length);
-		// initializedInConstructor = 'hello';
+		if(Std.random(2) == 0) {
+			initializedInSomeBranchesOfConstructor = 'hello';
+			initializedInAllBranchesOfConstructor = 'hello';
+		} else {
+			initializedInAllBranchesOfConstructor = 'hello';
+		}
+		initializedInConstructor = 'hello';
 	}
 
 	static function fieldAccess_onNullableValue_shouldFail():Void {

@@ -149,6 +149,56 @@ let should_be_initialized field =
 		| _ -> false
 
 (**
+	Walk through all sub-expression of `e`
+*)
+(* let traverse_expr e callback =
+	match e.eexpr with
+		| TObjectDecl fields ->
+			List.iter (fun (_, e) -> callback e) fields
+		| TCall (callee, args) ->
+			callback callee;
+			List.iter callback args
+		| TIf (condition, if_body, else_body) ->
+			callback condition;
+			callback if_body;
+			Option.may callback else_body
+		| TSwitch (target, cases, default) ->
+			callback target;
+			List.iter
+				(fun (body, condition) ->
+					callback condition;
+					List.iter callback body
+				)
+				cases;
+			Option.may callback default
+		| TTry (try_block, catches) ->
+			callback try_block;
+			List.iter (fun (_, body) -> callback body) catches
+		| TNew (_, _, exprs)
+		| TBlock exprs
+		| TArrayDecl exprs ->
+			List.iter callback exprs
+		| TWhile (e1, e2, _)
+		| TArray (e1, e2)
+		| TBinop (_, e1, e2)
+		| TFor (_, e1, e2) ->
+			callback e1;
+			callback e2
+		| TField (e, _)
+		| TParenthesis e
+		| TUnop (_, _, e)
+		| TFunction { tf_expr = e }
+		| TVar (_, Some e)
+		| TReturn (Some e)
+		| TThrow e
+		| TCast (e, _)
+		| TMeta (_, e)
+		| TEnumIndex e
+		| TEnumParameter (e, _, _) ->
+			callback e
+		| TConst _ | TLocal _ | TTypeExpr _ | TVar (_, None) | TReturn None | TBreak | TContinue | TIdent _ -> () *)
+
+(**
 	Each loop or function should have its own scope.
 *)
 class safety_scope (scope_type:scope_type) =
@@ -350,14 +400,14 @@ class expr_checker report =
 			Register an error
 		*)
 		method error msg p =
-			report.sc_errors <- { sm_msg = msg; sm_pos = p; } :: report.sc_errors;
+			report.sc_errors <- { sm_msg = ("Safety: " ^ msg); sm_pos = p; } :: report.sc_errors;
 			(* cnt <- cnt + 1;
 			if cnt = 2 then assert false *)
 		(**
 			Register an warning
 		*)
 		method warning msg p =
-			report.sc_warnings <- { sm_msg = msg; sm_pos = p; } :: report.sc_warnings;
+			report.sc_warnings <- { sm_msg = ("Safety: " ^ msg); sm_pos = p; } :: report.sc_warnings;
 		(**
 			Check if `e` is nullable even if the type is reported not-nullable.
 			Haxe type system lies sometimes.
@@ -634,6 +684,8 @@ class expr_checker report =
 class class_checker cls report =
 	object (self)
 			val checker = new expr_checker report
+			val mutable initialized_in_constructor = Hashtbl.create 1
+			val mutable constructor_checked = false
 		(**
 			Entry point for checking a class
 		*)
@@ -655,13 +707,72 @@ class class_checker cls report =
 					if not (is_nullable_type field.cf_type) then
 						match field.cf_expr with
 							| None ->
-								checker#error ("Field \"" ^ field.cf_name ^ "\" is not nullable thus should have an initial value.") field.cf_pos
+								if is_static then
+									checker#error
+										("Field \"" ^ field.cf_name ^ "\" is not nullable thus should have an initial value.")
+										field.cf_pos
+								else if not (self#is_initialized_in_constructor field) then
+									checker#error
+										("Field \"" ^ field.cf_name ^ "\" is not nullable thus should have an initial value or should be initialized in constructor.")
+										field.cf_pos
 							| Some e ->
 								if checker#is_nullable_expr e then
 									checker#error ("Cannot set nullable initial value for not-nullable field \"" ^ field.cf_name ^ "\".") field.cf_pos
 			in
 			List.iter (check_field false) cls.cl_ordered_fields;
 			List.iter (check_field true) cls.cl_ordered_statics
+		(**
+			Check if `field` is initialized in constructor
+		*)
+		method private is_initialized_in_constructor field =
+			if constructor_checked then
+				Hashtbl.mem initialized_in_constructor field.cf_name
+			else begin
+				constructor_checked <- true;
+				let rec traverse e =
+					match e.eexpr with
+						| TBinop (OpAssign, { eexpr = TField ({ eexpr = TConst TThis }, FInstance (_, _, f)) }, _) ->
+							let result = Hashtbl.create 1 in
+							Hashtbl.add result f.cf_name f;
+							result
+						| TWhile (_, body, DoWhile) ->
+							traverse body
+						| TBlock exprs ->
+							let result = Hashtbl.create (List.length exprs) in
+							List.iter
+								(fun e ->
+									Hashtbl.iter
+										(fun name f -> Hashtbl.replace result name f)
+										(traverse e)
+								)
+								exprs;
+							result
+						| TIf (_, if_block, Some else_block) ->
+							let result = Hashtbl.create 10
+							and initialized_in_if = traverse if_block
+							and initialized_in_else = traverse else_block in
+							Hashtbl.iter
+								(fun name f ->
+									if Hashtbl.mem initialized_in_else name then
+										Hashtbl.replace result name f
+								)
+								initialized_in_if;
+							Hashtbl.iter
+								(fun name f ->
+									if Hashtbl.mem initialized_in_if name then
+										Hashtbl.replace result name f
+								)
+								initialized_in_else;
+							result
+						| _ -> Hashtbl.create 0
+				in
+				match cls.cl_constructor with
+					| Some { cf_expr = Some { eexpr = TFunction { tf_expr = e } } } ->
+						initialized_in_constructor <- traverse e;
+						Hashtbl.mem initialized_in_constructor field.cf_name
+					| _ -> false
+			end
+
 	end
 
 class plugin =
