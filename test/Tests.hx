@@ -13,13 +13,13 @@ private enum DummyEnum {
 class Tests
 {
 	// @:shouldWarn public var publiclyModifiableField:String = 'hello';
-	// @:shouldFail var notInitializedField:Int;
-	// @:shouldFail var notInitializedProperty(default,null):Float;
-	// @:shouldFail @:isVar var notInitializedIsVar(get,set):String;
-	// function get_notInitializedIsVar() return notInitializedIsVar;
-	// function set_notInitializedIsVar(v) return notInitializedIsVar = v;
+	@:shouldFail var notInitializedField:Int;
+	@:shouldFail var notInitializedProperty(default,null):Float;
+	@:shouldFail @:isVar var notInitializedIsVar(get,set):String;
+	function get_notInitializedIsVar() return notInitializedIsVar;
+	function set_notInitializedIsVar(v) return notInitializedIsVar = v;
 
-	// var initialized:Bool = false;
+	var initialized:Bool = false;
 	// var initializedInConstructor:String;
 
 	/**
@@ -36,6 +36,7 @@ class Tests
 	function new(a:String) {
 		var s:Null<String> = 'hello';
 		shouldFail(s.length);
+		// initializedInConstructor = 'hello';
 	}
 
 	static function fieldAccess_onNullableValue_shouldFail():Void {

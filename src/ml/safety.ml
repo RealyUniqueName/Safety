@@ -140,6 +140,15 @@ let need_check com path =
 			with Not_found -> false
 
 (**
+	Check if specified `field` represents a `var` field which will exist at runtime.
+*)
+let should_be_initialized field =
+	match field.cf_kind with
+		| Var { v_read = AccNormal | AccInline | AccNo } | Var { v_write = AccNormal | AccNo } -> true
+		| Var _ -> Meta.has Meta.IsVar field.cf_meta
+		| _ -> false
+
+(**
 	Each loop or function should have its own scope.
 *)
 class safety_scope (scope_type:scope_type) =
@@ -353,7 +362,7 @@ class expr_checker report =
 			Check if `e` is nullable even if the type is reported not-nullable.
 			Haxe type system lies sometimes.
 		*)
-		method private is_nullable_expr e =
+		method is_nullable_expr e =
 			match e.eexpr with
 				| TConst TNull -> true
 				| TParenthesis e -> self#is_nullable_expr e
@@ -550,7 +559,7 @@ class expr_checker report =
 					local_safety#process_or left_expr right_expr self#is_nullable_expr self#check_expr
 				| OpAssign ->
 					if not (self#can_pass_expr right_expr left_expr.etype) then
-						self#error "Cannot assign nullable value to not-nullable acceptor." p
+						self#error "Cannot assign nullable value here." p
 					else
 						local_safety#handle_assignment self#is_nullable_expr left_expr right_expr;
 					check_both()
@@ -563,7 +572,7 @@ class expr_checker report =
 		*)
 		method private check_unop e p =
 			if self#is_nullable_expr e then
-				self#error "Cannot execute unary operation on nullable value." p;
+				self#error "Cannot perform unary operation on nullable value." p;
 			self#check_expr e
 		(**
 			Don't assign nullable value to not-nullable variable on var declaration
@@ -629,6 +638,7 @@ class class_checker cls report =
 			Entry point for checking a class
 		*)
 		method check =
+			self#check_var_fields;
 			let check_field f =
 				Option.may checker#check_root_expr f.cf_expr
 			in
@@ -636,6 +646,22 @@ class class_checker cls report =
 			Option.may (fun field -> Option.may checker#check_root_expr field.cf_expr) cls.cl_constructor;
 			List.iter check_field cls.cl_ordered_fields;
 			List.iter check_field cls.cl_ordered_statics;
+		(**
+			Check `var` fields are initialized properly
+		*)
+		method check_var_fields =
+			let check_field is_static field =
+				if should_be_initialized field then
+					if not (is_nullable_type field.cf_type) then
+						match field.cf_expr with
+							| None ->
+								checker#error ("Field \"" ^ field.cf_name ^ "\" is not nullable thus should have an initial value.") field.cf_pos
+							| Some e ->
+								if checker#is_nullable_expr e then
+									checker#error ("Cannot set nullable initial value for not-nullable field \"" ^ field.cf_name ^ "\".") field.cf_pos
+			in
+			List.iter (check_field false) cls.cl_ordered_fields;
+			List.iter (check_field true) cls.cl_ordered_statics
 	end
 
 class plugin =
