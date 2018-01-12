@@ -965,7 +965,7 @@ class expr_checker report =
 				| TTypeExpr _ -> ()
 				| TParenthesis e -> self#check_expr e
 				| TObjectDecl fields -> List.iter (fun (_, e) -> self#check_expr e) fields
-				| TArrayDecl exprs -> List.iter self#check_expr exprs
+				| TArrayDecl items -> self#check_array_decl items e.etype e.epos
 				| TCall (callee, args) -> self#check_call callee args
 				| TNew ({ cl_constructor = Some ctor }, _, args) -> self#check_constructor ctor args e.epos
 				| TNew (_, _, args) -> List.iter self#check_expr args
@@ -990,6 +990,21 @@ class expr_checker report =
 				| TEnumIndex idx -> self#check_enum_index idx
 				| TEnumParameter (e, _, _) -> self#check_expr e (** Checking enum value itself is not needed here because this expr always follows after TEnumIndex *)
 				| TIdent _ -> ()
+		(**
+			Don't allow to use nullable values as items in declaration of not-nullable arrays
+		*)
+		method private check_array_decl items arr_type p =
+			(match Abstract.follow_with_abstracts arr_type with
+				| TInst ({ cl_path = ([], "Array") }, [item_type]) ->
+					List.iter
+						(fun e ->
+							if not (self#can_pass_expr e item_type e.epos) then
+								self#error ("Cannot use value of " ^ (str_type e.etype) ^ " as an item in Array<" ^ (str_type item_type) ^ ">") e.epos
+						)
+						items;
+				| _ -> ()
+			);
+			List.iter self#check_expr items
 		(**
 			Deal with nullable enum values
 		*)

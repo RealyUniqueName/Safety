@@ -329,6 +329,12 @@ class Tests
 		shouldFail([s = a]);
 	}
 
+	static function arrayDeclaration_nullableItemInNotNullableArray_shouldFail(?s:String, ?i:Int) {
+		var arr:Array<String>;
+		shouldFail(arr = ['', s, '']);
+		var arr:Array<Int> = [1, shouldFail(i)];
+	}
+
 	static function tryCatch_shouldCheck(?a:String) {
 		var s:String;
 		try {
@@ -365,6 +371,8 @@ class Tests
 	static function objectDecl_passObjWithNullabelFieldToObjWithNotNullableField_shouldFail(?a:String) {
 		shouldFail(var o:{field:String} = {field:a});
 		shouldFail(o = new Tests(''));
+		var arr:Array<Null<String>> = ['', a];
+		shouldFail(var q:{field:Array<String>} = {field:arr});
 	}
 
 	/**
