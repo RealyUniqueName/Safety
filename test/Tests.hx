@@ -375,6 +375,13 @@ class Tests
 		shouldFail(var q:{field:Array<String>} = {field:arr});
 	}
 
+	static function closure_whichReturnsWithoutExplicitType_shouldPass(s:String) {
+		return
+			function() {
+				return s;
+			};
+	}
+
 	/**
 	 *
 	 *  TODO far far future

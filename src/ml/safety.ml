@@ -13,8 +13,8 @@ type safety_message = {
 }
 
 type safety_report = {
-	mutable sc_errors : safety_message list;
-	mutable sc_warnings : safety_message list;
+	mutable sr_errors : safety_message list;
+	mutable sr_warnings : safety_message list;
 }
 
 type scope_type =
@@ -793,19 +793,22 @@ class local_vars =
 			Check if local variable is guaranteed to not have a `null` value.
 		*)
 		method is_safe local_var =
-			let rec traverse scopes =
-				match scopes with
-					| [] -> false
-					| current :: rest ->
-						if current#owns_var local_var then
-							false
-						else if current#get_type = STClosure then
-							true
-						else
-							traverse rest
-			in
-			let captured = traverse scopes in
-			not captured && self#get_current_scope#is_safe local_var
+			if not (is_nullable_type local_var.v_type) then
+				true
+			else
+				let rec traverse scopes =
+					match scopes with
+						| [] -> false
+						| current :: rest ->
+							if current#owns_var local_var then
+								false
+							else if current#get_type = STClosure then
+								true
+							else
+								traverse rest
+				in
+				let captured = traverse scopes in
+				not captured && self#get_current_scope#is_safe local_var
 		(**
 			This method should be called upon passing `while`.
 			It collects locals which are checked against `null` and executes callbacks for expressions with proper statuses of locals.
@@ -898,14 +901,14 @@ class expr_checker report =
 			Register an error
 		*)
 		method error msg p =
-			report.sc_errors <- { sm_msg = ("Safety: " ^ msg); sm_pos = p; } :: report.sc_errors;
+			report.sr_errors <- { sm_msg = ("Safety: " ^ msg); sm_pos = p; } :: report.sr_errors;
 			(* cnt <- cnt + 1;
 			if cnt = 2 then assert false *)
 		(**
 			Register an warning
 		*)
 		method warning msg p =
-			report.sc_warnings <- { sm_msg = ("Safety: " ^ msg); sm_pos = p; } :: report.sc_warnings;
+			report.sr_warnings <- { sm_msg = ("Safety: " ^ msg); sm_pos = p; } :: report.sr_warnings;
 		(**
 			Check if `e` is nullable even if the type is reported not-nullable.
 			Haxe type system lies sometimes.
@@ -952,7 +955,9 @@ class expr_checker report =
 		method check_root_expr e =
 			(* print_endline (s_expr (fun t -> s_type (print_context()) t) e); *)
 			self#check_expr e;
-			local_safety#clear
+			local_safety#clear;
+			return_types <- [];
+			in_closure <- false
 		(**
 			Recursively checks an expression
 		*)
@@ -1305,7 +1310,7 @@ class class_checker cls report =
 
 class plugin =
 	object (self)
-		val report = { sc_errors = []; sc_warnings = [] }
+		val report = { sr_errors = []; sr_warnings = [] }
 		(**
 			Plugin API: this method should be executed at initialization macro time
 		*)
@@ -1326,7 +1331,7 @@ class plugin =
 				in
 				List.iter traverse types;
 				if not (raw_defined com "SAFETY_SILENT") then
-					List.iter (fun err -> com.error err.sm_msg err.sm_pos) (List.rev report.sc_errors);
+					List.iter (fun err -> com.error err.sm_msg err.sm_pos) (List.rev report.sr_errors);
 				t();
 			);
 			(* This is because of vfun0 should return something *)
@@ -1335,12 +1340,12 @@ class plugin =
 			Plugin API: returns a list of all errors found during safety checks
 		*)
 		method get_errors () =
-			self#serialize report.sc_errors
+			self#serialize report.sr_errors
 		(**
 			Plugin API: returns a list of all warnings found during safety checks
 		*)
 		method get_warnings () =
-			self#serialize report.sc_warnings
+			self#serialize report.sr_warnings
 		method private serialize messages =
 			let arr = Array.make (List.length messages) vnull in
 			let set_item idx msg p =
