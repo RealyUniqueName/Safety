@@ -1306,7 +1306,6 @@ class plugin =
 		method run () =
 			let com = (get_ctx()).curapi.get_com() in
 			add_typing_filter com (fun types ->
-				(* let t = macro_timer ctx ["safety plugin"] in *)
 				let t = Timer.timer ["safety plugin"] in
 				let rec traverse com_type =
 					match com_type with
@@ -1319,8 +1318,7 @@ class plugin =
 				List.iter traverse types;
 				if not (raw_defined com "SAFETY_SILENT") then
 					List.iter (fun err -> com.error err.sm_msg err.sm_pos) (List.rev report.sc_errors);
-				t()
-				(* t() *)
+				t();
 			);
 			(* This is because of vfun0 should return something *)
 			vint32 (Int32.of_int 0)
