@@ -1082,7 +1082,7 @@ class expr_checker report =
 			self#check_expr e;
 			match return_types with
 				| t :: _ when not (self#can_pass_expr e t p) ->
-					self#error "Cannot return nullable value from function with not nullable return type." p
+					self#error ("Cannot return nullable value of " ^ (str_type e.etype) ^ " as " ^ (str_type t)) p
 				| _ -> ()
 		(**
 			Check safety in `switch` expressions.
@@ -1224,7 +1224,8 @@ class class_checker cls report =
 			Entry point for checking a class
 		*)
 		method check =
-			self#check_var_fields;
+			if (not cls.cl_extern) && (not cls.cl_interface) then
+				self#check_var_fields;
 			let check_field f =
 				Option.may checker#check_root_expr f.cf_expr
 			in
