@@ -28,6 +28,21 @@ type safety_unify_error =
 exception Safety_error of safety_unify_error
 
 (**
+	Terminates compiler process and prints user-friendly instructions about filing an issue in compiler repo.
+*)
+let fail ?msg hxpos mlpos =
+	let msg =
+		(Lexer.get_error_pos (Printf.sprintf "%s:%d:") hxpos) ^ ": "
+		^ "Haxe-safety: " ^ (match msg with Some msg -> msg | _ -> "unexpected expression.") ^ "\n"
+		^ "Submit an issue to https://github.com/RealyUniqueName/Haxe-Safety/issues with expression example and following information:"
+	in
+	match mlpos with
+		| (file, line, _, _) ->
+			Printf.eprintf "%s\n" msg;
+			Printf.eprintf "%s:%d\n" file line;
+			assert false
+
+(**
 	Returns human-readable string representation of specified type
 *)
 let str_type t = s_type (print_context()) t
@@ -558,7 +573,6 @@ and unify_type_params a b tl1 tl2 =
 		try
 			with_variance (type_eq EqRightDynamic) t1 t2
 		with Unify_error l ->
-			print_endline "unify_type_params error";
 			let err = cannot_unify a b in
 			error (err :: (Invariant_parameter (t1,t2)) :: l)
 	) tl1 tl2
@@ -584,21 +598,6 @@ and unify_with_access t1 f2 =
 * END OF COPY-PASTE
 *
 *)
-
-(**
-	Terminates compiler process and prints user-friendly instructions about filing an issue in compiler repo.
-*)
-let fail ?msg hxpos mlpos =
-	let msg =
-		(Lexer.get_error_pos (Printf.sprintf "%s:%d:") hxpos) ^ ": "
-		^ "Haxe-safety: " ^ (match msg with Some msg -> msg | _ -> "unexpected expression.") ^ "\n"
-		^ "Submit an issue to https://github.com/RealyUniqueName/Haxe-Safety/issues with expression example and following information:"
-	in
-	match mlpos with
-		| (file, line, _, _) ->
-			Printf.eprintf "%s\n" msg;
-			Printf.eprintf "%s:%d\n" file line;
-			assert false
 
 (**
 	If `expr` is a TCast or TMeta, returns underlying expression (recursively bypassing nested casts).
@@ -1166,9 +1165,14 @@ class expr_checker report =
 			Check constructor invocation: dont' pass nulable values to not-nullable arguments
 		*)
 		method private check_constructor ctor args p =
-			match ctor.cf_type with
-				| TFun (types, _) -> self#check_args args types
-				| _ -> fail ~msg:"Unexpected constructor type." p __POS__
+			let rec traverse t =
+				match follow t with
+					| TFun (types, _) -> self#check_args args types
+					(* | TLazy l -> traverse (lazy_type l)
+					| TMono r -> (match !r) *)
+					| _ -> fail ~msg:"Unexpected constructor type." p __POS__
+			in
+			traverse ctor.cf_type
 
 		(**
 			Check calls: don't call a nullable value, dont' pass nulable values to not-nullable arguments
@@ -1313,7 +1317,10 @@ class plugin =
 						| TTypeDecl typedef -> ()
 						| TAbstractDecl abstr -> ()
 						| TClassDecl { cl_path = path } when not (need_check com path) -> ()
-						| TClassDecl cls -> (new class_checker cls report)#check
+						| TClassDecl cls ->
+							if raw_defined com "SAFETY_DEBUG" then
+								print_endline ("Safety check: " ^ (str_type (TInst (cls, []))));
+							(new class_checker cls report)#check
 				in
 				List.iter traverse types;
 				if not (raw_defined com "SAFETY_SILENT") then
