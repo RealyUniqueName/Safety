@@ -303,11 +303,6 @@ class Tests
 		}
 	}
 
-	// TODO
-	// static function objectDecl_passObjWithNullabelFieldToObjWithNotNullableField_shouldFail(?a:String) {
-	// 	shouldFail(var o:{field:String} = {field:a});
-	// }
-
 	static function for_iterateOverNullableValue_shouldFail(?a:Iterable<Int>) {
 		for(i in shouldFail(a)) {}
 	}
@@ -361,7 +356,21 @@ class Tests
 		}
 	}
 
-	// TODO far far future
+	static function unification_typeOfNullableToTypeOfNotNullable_shouldFail(?a:Int) {
+		var withNullables = [1, a, 2];
+		shouldFail(var notNullables:Array<Int> = withNullables);
+	}
+
+	// static function objectDecl_passObjWithNullabelFieldToObjWithNotNullableField_shouldFail(?a:String) {
+	// 	shouldFail(var o:{field:String} = {field:a});
+	// }
+
+	/**
+	 *
+	 *  TODO far far future
+	 *
+	 */
+
 	// static function checkAgainstNull_assignCheckedValueToVarWithoutExplicitType_shouldTypeAsNotNullable() {
 	// 	var nullable:Null<String> = 'hello';
 	// 	var v = nullable != null ? nullable : 'world';
