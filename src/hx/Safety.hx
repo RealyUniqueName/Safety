@@ -8,7 +8,7 @@ import eval.vm.Context in EvalContext;
 using haxe.macro.PositionTools;
 using haxe.io.Path;
 
-private typedef PluginApi = {
+typedef SafetyPluginApi = {
 	/** This method should be executed at initialization macro time */
 	function run():Void;
 	/** Returns a list of all errors found during safety checks */
@@ -20,7 +20,7 @@ private typedef PluginApi = {
 
 class Safety {
 #if macro
-	static public var plugin:PluginApi = EvalContext.loadPlugin(getPluginPath());
+	static public var plugin(default,null):SafetyPluginApi = EvalContext.loadPlugin(getPluginPath());
 
 	static public function register() {
 		if(haxe.macro.Context.defined('display')) {
