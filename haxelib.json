@@ -6,7 +6,7 @@
 	"description"  : "Null safety for Haxe.",
 	"version"      : "0.1.0",
 	"releasenote"  : "Initial release.",
-	"classPath"    : "src",
+	"classPath"    : "src/hx",
 	"contributors" : ["RealyUniqueName"],
 	"dependencies" : {
 		"exception" : ""

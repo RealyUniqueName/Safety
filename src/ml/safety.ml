@@ -68,7 +68,7 @@ let safety_error () = raise (Safety_error NullSafetyError)
 
 (**
 *
-* BEGIN OF COPY-PAST FROM type.ml
+* BEGIN OF COPY-PAST from type.ml with some modifications.
 * 	scroll down to END OF COPY-PASTE
 *)
 
