@@ -22,6 +22,11 @@ type scope_type =
 	| STLoop
 	| STClosure
 
+type safety_unify_error =
+	| NullSafetyError
+
+exception Safety_error of safety_unify_error
+
 (**
 	Returns human-readable string representation of specified type
 *)
@@ -55,6 +60,11 @@ let rec unfold_null t =
 		| TLazy f -> unfold_null (lazy_type f)
 		| TType (t,tl) -> unfold_null (apply_params t.t_params tl t.t_type)
 		| _ -> t
+
+(**
+	Shadow Type.error to avoid raising unification errors, which should not be raised from null-safety checks
+*)
+let safety_error () = raise (Safety_error NullSafetyError)
 
 (**
 *
@@ -113,9 +123,8 @@ let rec type_eq param a b =
 		type_eq param t1 t2
 	| TAbstract ({a_path=[],"Null"},[t]),_ when param <> EqDoNotFollowNull ->
 		(* type_eq param t b *)
-		error [cannot_unify a b]
+		safety_error ()
 	| _,TAbstract ({a_path=[],"Null"},[t]) when param <> EqDoNotFollowNull ->
-		print_endline "| NULL";
 		type_eq param a t
 	| TAbstract (a1,tl1) , TAbstract (a2,tl2) ->
 		if a1 != a2 && not (param = EqCoreType && a1.a_path = a2.a_path) then error [cannot_unify a b];
@@ -159,7 +168,7 @@ and unify a b =
 	if a == b then
 		()
 	else if is_nullable_type a && not (is_nullable_type b) then
-		error [cannot_unify a b]
+		safety_error ()
 	else match a, b with
 	| TLazy f , _ -> unify (lazy_type f) b
 	| _ , TLazy f -> unify a (lazy_type f)
@@ -546,13 +555,12 @@ and unify_with_variance f t1 t2 =
 
 and unify_type_params a b tl1 tl2 =
 	List.iter2 (fun t1 t2 ->
-		type_eq EqRightDynamic t1 t2
-		(* try
+		try
 			with_variance (type_eq EqRightDynamic) t1 t2
 		with Unify_error l ->
 			print_endline "unify_type_params error";
 			let err = cannot_unify a b in
-			error (err :: (Invariant_parameter (t1,t2)) :: l) *)
+			error (err :: (Invariant_parameter (t1,t2)) :: l)
 	) tl1 tl2
 
 and with_variance f t1 t2 =
@@ -930,20 +938,12 @@ class expr_checker report =
 					true
 				with
 					(* Real unification performed by the compiler already passed at this point. So we can face null-safety errors only *)
-					| Unify_error errors ->
-						let rec traverse errors =
-							match errors with
-								| [] -> ()
-								| Cannot_unify _ :: rest ->
-									self#error ("Cannot unify " ^ (str_type expr_type) ^ " with " ^ (str_type to_type)) p;
-									traverse rest
-								| _ ->
-									fail ~msg:("Unexpected unification error while trying to unify " ^ (str_type expr_type) ^ " with " ^ (str_type to_type)) p __POS__
-						in
-						traverse errors;
-						true (* returning `true` because error is already logged in the line above *)
-						(* [Cannot_unify _] *)
-					| _ -> fail ~msg:("Unexpected unification error while trying to unify " ^ (str_type expr_type) ^ " with " ^ (str_type to_type)) p __POS__
+					| Safety_error err ->
+						self#error ("Cannot unify " ^ (str_type expr_type) ^ " with " ^ (str_type to_type)) p;
+						(* returning `true` because error is already logged in the line above *)
+						true
+					(* returning `true` because real unification is already check by the compiler at this moment *)
+					| _ -> true
 				(* can_pass_type expr.etype to_type *)
 		(**
 			Should be called for the root expressions of a method or for then initialization expressions of fields.
@@ -985,7 +985,7 @@ class expr_checker report =
 				| TContinue -> ()
 				| TThrow expr -> self#check_throw expr e.epos
 				| TCast (expr, _) -> self#check_cast expr e.etype e.epos
-				| TMeta ((Meta.Custom ":unsafe", _, _), _) -> print_endline "UNSAFE META!"
+				(* | TMeta ((Meta.Custom ":unsafe", _, _), _) -> print_endline "UNSAFE META!" *)
 				| TMeta (_, e) -> self#check_expr e
 				| TEnumIndex idx -> self#check_enum_index idx
 				| TEnumParameter (e, _, _) -> self#check_expr e (** Checking enum value itself is not needed here because this expr always follows after TEnumIndex *)

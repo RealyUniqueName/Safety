@@ -12,6 +12,7 @@ private enum DummyEnum {
 @:build(Validator.checkFields())
 class Tests
 {
+	public var field:Null<String>;
 	// @:shouldWarn public var publiclyModifiableField:String = 'hello';
 	@:shouldFail var notInitializedField:Int;
 	@:shouldFail var notInitializedProperty(default,null):Float;
@@ -361,9 +362,10 @@ class Tests
 		shouldFail(var notNullables:Array<Int> = withNullables);
 	}
 
-	// static function objectDecl_passObjWithNullabelFieldToObjWithNotNullableField_shouldFail(?a:String) {
-	// 	shouldFail(var o:{field:String} = {field:a});
-	// }
+	static function objectDecl_passObjWithNullabelFieldToObjWithNotNullableField_shouldFail(?a:String) {
+		shouldFail(var o:{field:String} = {field:a});
+		shouldFail(o = new Tests(''));
+	}
 
 	/**
 	 *
