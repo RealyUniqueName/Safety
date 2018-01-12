@@ -26,6 +26,9 @@ class Safety {
 		if(haxe.macro.Context.defined('display')) {
 			return;
 		}
+		if(!Context.defined('SAFETY')) {
+			Context.error('-D SAFETY is not defined. Define it like "-D SAFETY=ALL" or "-D SAFETY=SomeClass,my.pack,another.pack.AnotherClass"', Context.currentPos());
+		}
 		plugin.run();
 	}
 
