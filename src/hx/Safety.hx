@@ -27,7 +27,7 @@ class Safety {
 			return;
 		}
 		if(!Context.defined('SAFETY')) {
-			Context.error('-D SAFETY is not defined. Define it like "-D SAFETY=ALL" or "-D SAFETY=SomeClass,my.pack,another.pack.AnotherClass"', Context.currentPos());
+			Context.error('-D SAFETY is not defined. Define it like "-D SAFETY=ALL" or "-D SAFETY=SomeClass,my.pack,another.pack.AnotherClass,/path/to/dir"', Context.currentPos());
 		}
 		plugin.run();
 	}

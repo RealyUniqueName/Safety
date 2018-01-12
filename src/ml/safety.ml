@@ -662,28 +662,30 @@ let process_condition condition (is_nullable_expr:texpr->bool) callback =
 (**
 	Check if specified `path` is mentioned in `-D SAFETY=here`
 *)
-let need_check com path =
-	match path with
+let need_check com cls =
+	let starts_with (haystack:string) (needle:string) :bool =
+		(String.length haystack >= String.length needle)
+		&& (needle = String.sub haystack 0 (String.length needle))
+	in
+	match cls.cl_path with
 		| ([], "Safety") -> false
 		| (packages, name) ->
 			try
-				let rec find str lst =
+				let file_path = Path.unique_full_path cls.cl_pos.pfile
+				and class_path = (String.concat "." packages) ^ (if List.length packages = 0 then "" else ".") ^ name in
+				let rec find lst =
 					match lst with
 						| [] -> false
 						| ["ALL"] -> true
 						| current :: rest ->
-							let contains =
-								(String.length str >= String.length current)
-								&& (current = String.sub str 0 (String.length current))
-							in
-							if contains then
+							if starts_with class_path current || starts_with file_path (Path.unique_full_path current) then
 								true
 							else
-								find str rest;
-				and check_list = Str.split (Str.regexp ",") (String.trim (raw_defined_value com "SAFETY"))
-				and path_str = (String.concat "." packages) ^ (if List.length packages = 0 then "" else ".") ^ name in
-				find path_str check_list
-			with Not_found -> false
+								find rest
+				and check_list = Str.split (Str.regexp ",") (String.trim (raw_defined_value com "SAFETY")) in
+				find check_list
+			with
+				| Not_found -> false
 
 (**
 	Check if specified `field` represents a `var` field which will exist at runtime.
@@ -1316,7 +1318,7 @@ class plugin =
 						| TEnumDecl enm -> ()
 						| TTypeDecl typedef -> ()
 						| TAbstractDecl abstr -> ()
-						| TClassDecl { cl_path = path } when not (need_check com path) -> ()
+						| TClassDecl cls when not (need_check com cls) -> ()
 						| TClassDecl cls ->
 							if raw_defined com "SAFETY_DEBUG" then
 								print_endline ("Safety check: " ^ (str_type (TInst (cls, []))));
