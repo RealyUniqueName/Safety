@@ -92,7 +92,7 @@ static public inline function apply<T>(value:Null<T>, callback:T->Void):Null<T>;
 ```
 * Safe navigation operator (disabled by default; see [Usage](#Usage))
 ```haxe
-var obj:Null<{ field:Null<String> } = null;
+var obj:Null<{ field:Null<String> }> = null;
 trace(obj!.field!.length); //null
 obj = { field:'hello' };
 trace(obj!.field!.length); //5
