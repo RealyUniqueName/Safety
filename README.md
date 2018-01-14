@@ -8,11 +8,11 @@ Hopefully we can find the best approach to null safety together. And then with a
 
 Minimum supported Haxe version is `4.0.0-preview.2`
 ```
-haxelib git safety {git-path-to-this-repo}
+haxelib git safety https://github.com/RealyUniqueName/Safety.git
 ```
-If you want to use this plugin with another version of Haxe you need to setup desired version of Haxe for development (see {LINK}) and then
+If you want to use this plugin with another version of Haxe you need to setup desired version of Haxe for development (see [Building Haxe from source](https://haxe.org/documentation/introduction/building-haxe.html)) and then
 ```
-cd path/to/haxe-sources/
+cd path/to/haxe-source/
 PLUGIN=path/to/haxelib/safety/git/src/ml/safety make plugin
 ```
 
@@ -22,7 +22,7 @@ Add `-lib safety` to you hxml file.
 Use following flags:
 
 * `-D SAFETY=location1,location2` (required) - Use this flag to specify which location(s) you want plugin to check for null safety. This is a comma-separated list of packages, class names and filesystem paths. E.g. `-D SAFETY=Main,some.pack,another.pack.AnotherClass,path/to/src`. You can specify `-D SAFETY=ALL` instead which will check all the code, even std lib (not recommended)
-* `-D SAFETY_ENABLE_SAFE_NAVIGATION` (optional) - Enables [safe navigation operator](https://en.wikipedia.org/wiki/Safe_navigation_operator) `!.` (disabled by default).
+* `-D SAFETY_ENABLE_SAFE_NAVIGATION` (optional) - Enables [safe navigation operator](https://en.wikipedia.org/wiki/Safe_navigation_operator) `!.` (Disabled by default. Does not provide code completion. Implemented via build macro which means penalties for compilation speed.)
 * `-D SAFETY_SILENT` (optional) - do not abort compilation on safety errors. You can handle safety errors manually in `Context.onAfterTyping(_ -> trace(Safety.plugin.getErrors()))`
 * `-D SAFETY_DEBUG` (optional) - prints additional information during safety checking.
 
@@ -37,7 +37,7 @@ str = nullable; //Compilation error
 fn(nullable); //Compilation error. Function argument was not declared with `Null<String>`
 ```
 * Using nullables with unary and binary operators (except `==` and `!=`) is not allowed;
-* If field is declared without `Null<>` then it should have an initial value or it should be initialized in a constructor (for instance fields);
+* If a field is declared without `Null<>` then it should have an initial value or it should be initialized in a constructor (for instance fields);
 * Passing an instance of parameterized type with nullable type parameter to a place with the same type, but with not-nullable type parameter is not allowed:
 ```haxe
 var nullables:Array<Null<String>> = ['hello', null, 'world'];
@@ -52,7 +52,8 @@ if(nullable != null) {
 }
 s = nullable; //Compilation error
 s = (nullable == null ? 'hello' : nullable); //OK
-* Static extensions for convenience with nullables:
+```
+* Static extensions for convenience:
 ```haxe
 using Safety;
 
@@ -89,17 +90,33 @@ static public inline function run<T>(value:Null<T>, callback:T->Void):Void;
 */
 static public inline function apply<T>(value:Null<T>, callback:T->Void):Null<T>;
 ```
-
-TODO: safe-call operator
+* Safe navigation operator (disabled by default; see [Usage](#Usage))
+```haxe
+var obj:Null<{ field:Null<String> } = null;
+trace(obj!.field!.length); //null
+obj = { field:'hello' };
+trace(obj!.field!.length); //5
+```
 
 ## Limitations
 
-Safety checks run after compiler typing phase. So at this point everything is already typed. That means if another var infers a nullable type of null-checked var, then that new var is also nullable:
+* Haxe was not designed with null safety in mind, so it's always possible `null` will come to your code from 3rd-party code or from std lib.
+Safety doesn't perform automatic runtime checks for any values which you get from any code.
+* Safety runs after compiler typing phase. At this point everything is already typed. That means if another var infers a nullable type of null-checked var, then that new var is also nullable, but it's not automatically safe:
 ```haxe
-
+var n1:Null<String> = getSomeStr();
+var s:String;
+if(n1 != null) {
+	s = n1; //OK
+	var n2 = n1;
+	$type(n2); //Null<String>
+	s = n2; //Compilation error
+	if(n2 != null) {
+		s = n2; //OK
+	}
+}
 ```
-
-Nullable fields and properties are not considered null-safe even after checking against `null`. Use safety extensions instead:
+* Nullable fields and properties are not considered null-safe even after checking against `null`. Use safety extensions instead:
 ```haxe
 using Safety;
 
@@ -114,13 +131,13 @@ class Main {
 	}
 }
 ```
-If a local var is captured in a closure that var cannot be safe anymore:
+* If a local var is captured and modified in a closure that var cannot be safe anymore:
 ```haxe
 var nullable:Null<String> = getSomeStr();
 var str:String;
 if(nullable != null) {
 	str = nullable; //OK
-	doStuff(function() return nullable);
+	doStuff(function() nullable = getSomeStr());
 	str = nullable; //Compilation error
 }
 ```
