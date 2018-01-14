@@ -26,7 +26,7 @@ class Safety {
 	static public var plugin(default,null):SafetyPluginApi = EvalContext.loadPlugin(getPluginPath());
 
 	static public function register() {
-		if(Context.defined('SAFETY_ENABLE_SAFE_CALL')) {
+		if(Context.defined('SAFETY_ENABLE_SAFE_NAVIGATION')) {
 			Compiler.addGlobalMetadata('', '@:build(safety.SafeCallOperator.build())');
 		}
 		if(haxe.macro.Context.defined('display')) {
