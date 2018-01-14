@@ -1,6 +1,6 @@
 # Safety
 
-This is a compiler plugin, which brings null safety to Haxe. It's an attempt to push Haxe towards null safety implementation in the compiler.
+This is a plugin for Haxe compiler. It's an attempt to push Haxe towards null safety implementation in the compiler.
 Use this plugin, report bugs and share your thoughts in [issues](https:/github.com/RealyUniqueName/Safety/issues).
 Hopefully we can find the best approach to null safety together. And then with all the collected experience we will be able to propose a solid implementation to the compiler.
 
@@ -28,7 +28,7 @@ Use following flags:
 
 ## Features
 
-* Safety doesn't allow you to pass nullable values to places which are not explicitly declared with `Null<SomeType>` (assignments, return statements, array access etc.);
+* Safety makes sure you will not pass nullable values to places which are not explicitly declared with `Null<SomeType>` (assignments, return statements, array access etc.);
 ```haxe
 function fn(s:String) {}
 var nullable:Null<String> = 'hello';
@@ -100,7 +100,7 @@ trace(obj!.field!.length); //5
 
 ## Limitations
 
-* Haxe was not designed with null safety in mind, so it's always possible `null` will come to your code from 3rd-party code or from std lib.
+* Haxe was not designed with null safety in mind, so it's always possible `null` will come to your code from 3rd-party code or even from std lib.
 Safety doesn't perform automatic runtime checks for any values which you get from any code.
 * Safety runs after compiler typing phase. At this point everything is already typed. That means if another var infers a nullable type of null-checked var, then that new var is also nullable, but it's not automatically safe:
 ```haxe
