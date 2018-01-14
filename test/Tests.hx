@@ -9,6 +9,10 @@ private enum DummyEnum {
 	DummyTwo(a:Int, ?b:String);
 }
 
+typedef TWrap<T> = T;
+
+abstract AWrap<T>(T) from T to T {}
+
 @:build(Validator.checkFields())
 class Tests
 {
@@ -24,6 +28,11 @@ class Tests
 	var initializedInConstructor:String;
 	var initializedInAllBranchesOfConstructor:String;
 	@:shouldFail var initializedInSomeBranchesOfConstructor:String;
+
+	static public function safeCallOperator_shouldWork() {
+		var obj:Null<{field:Null<String>}> = null;
+		var l = obj!.field!.length;
+	}
 
 	/**
 	 *  Null safety should work in __init__ functions

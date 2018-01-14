@@ -79,7 +79,7 @@ let rec unfold_null t =
 (**
 	Shadow Type.error to avoid raising unification errors, which should not be raised from null-safety checks
 *)
-let safety_error () = raise (Safety_error NullSafetyError)
+let safety_error () : unit = raise (Safety_error NullSafetyError)
 
 (**
 *
@@ -662,16 +662,16 @@ let process_condition condition (is_nullable_expr:texpr->bool) callback =
 (**
 	Check if specified `path` is mentioned in `-D SAFETY=here`
 *)
-let need_check com cls =
+let need_check com type_path file_path =
 	let starts_with (haystack:string) (needle:string) :bool =
 		(String.length haystack >= String.length needle)
 		&& (needle = String.sub haystack 0 (String.length needle))
 	in
-	match cls.cl_path with
+	match type_path with
 		| ([], "Safety") -> false
 		| (packages, name) ->
 			try
-				let file_path = Path.unique_full_path cls.cl_pos.pfile
+				let file_path = Path.unique_full_path file_path
 				and class_path = (String.concat "." packages) ^ (if List.length packages = 0 then "" else ".") ^ name in
 				let rec find lst =
 					match lst with
@@ -946,7 +946,7 @@ class expr_checker report =
 						self#error ("Cannot unify " ^ (str_type expr_type) ^ " with " ^ (str_type to_type)) p;
 						(* returning `true` because error is already logged in the line above *)
 						true
-					(* returning `true` because real unification is already check by the compiler at this moment *)
+					(* returning `true` because real unification check is already performed by the compiler at this moment *)
 					| _ -> true
 				(* can_pass_type expr.etype to_type *)
 		(**
@@ -1324,7 +1324,7 @@ class plugin =
 						| TEnumDecl enm -> ()
 						| TTypeDecl typedef -> ()
 						| TAbstractDecl abstr -> ()
-						| TClassDecl cls when not (need_check com cls) -> ()
+						| TClassDecl cls when not (need_check com cls.cl_path cls.cl_pos.pfile) -> ()
 						| TClassDecl cls ->
 							if raw_defined com "SAFETY_DEBUG" then
 								print_endline ("Safety check: " ^ (str_type (TInst (cls, []))));
@@ -1341,13 +1341,32 @@ class plugin =
 			Plugin API: returns a list of all errors found during safety checks
 		*)
 		method get_errors () =
-			self#serialize report.sr_errors
+			self#serialize_messages report.sr_errors
 		(**
 			Plugin API: returns a list of all warnings found during safety checks
 		*)
 		method get_warnings () =
-			self#serialize report.sr_warnings
-		method private serialize messages =
+			self#serialize_messages report.sr_warnings
+		(**
+			Plugin API: Check if current macro position should be handled by Safety (based on `-D SAFETY=` flag) for preprocessing safe-call operator `!.`
+		*)
+		method is_in_safety () =
+			let api = (get_ctx()).curapi in
+			match api.get_local_type() with
+				| None -> vfalse
+				| Some t ->
+					let check type_path file_path =
+						if need_check (api.get_com()) type_path file_path then
+							vtrue
+						else
+							vfalse
+					in
+					match t with
+						| TInst (cls, _) -> check cls.cl_path cls.cl_pos.pfile
+						| TAbstract (abstr, _) -> check abstr.a_path abstr.a_pos.pfile
+						| _ -> vfalse
+
+		method private serialize_messages messages =
 			let arr = Array.make (List.length messages) vnull in
 			let set_item idx msg p =
 				let obj = encode_obj_s
@@ -1377,5 +1396,6 @@ let api = new plugin in
 EvalStdLib.StdContext.register [
 	("run", vfun0 api#run);
 	("getErrors", vfun0 api#get_errors);
-	("getWarnings", vfun0 api#get_warnings)
+	("getWarnings", vfun0 api#get_warnings);
+	("isInSafety", vfun0 api#is_in_safety);
 ]

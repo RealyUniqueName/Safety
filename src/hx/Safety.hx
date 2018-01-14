@@ -1,6 +1,7 @@
 #if macro
 import haxe.macro.PositionTools;
 import haxe.macro.Context;
+import haxe.macro.Compiler;
 import haxe.macro.Expr;
 import haxe.io.Path;
 import eval.vm.Context in EvalContext;
@@ -15,6 +16,8 @@ typedef SafetyPluginApi = {
 	function getErrors():Array<{msg:String, pos:Position}>;
 	/** Returns a list of all warnings found during safety checks */
 	function getWarnings():Array<{msg:String, pos:Position}>;
+	/** Check if current macro position should be handled by Safety (based on `-D SAFETY=` flag) for preprocessing safe-call operator `!.` */
+	function isInSafety():Bool;
 }
 #end
 
@@ -23,11 +26,14 @@ class Safety {
 	static public var plugin(default,null):SafetyPluginApi = EvalContext.loadPlugin(getPluginPath());
 
 	static public function register() {
+		if(Context.defined('SAFETY_ENABLE_SAFE_CALL')) {
+			Compiler.addGlobalMetadata('', '@:build(safety.SafeCallOperator.build())');
+		}
 		if(haxe.macro.Context.defined('display')) {
 			return;
 		}
 		if(!Context.defined('SAFETY')) {
-			Context.error('-D SAFETY is not defined. Define it like "-D SAFETY=ALL" or "-D SAFETY=SomeClass,my.pack,another.pack.AnotherClass,/path/to/dir"', Context.currentPos());
+			Context.error('-D SAFETY is not defined. Define it like "-D SAFETY=SomeClass,my.pack,another.pack.AnotherClass,/path/to/dir"', Context.currentPos());
 		}
 		plugin.run();
 	}
@@ -55,7 +61,7 @@ class Safety {
 	}
 
 	/**
-	 *  Always returns `value`, but typed as non-nullable. Use at your own risk.
+	 *  Just returns `value` without any checks, but typed as not-nullable. Use at your own risk.
 	 */
 	static public function unsafe<T>(value:Null<T>):T {
 		return value;
