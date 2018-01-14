@@ -46,8 +46,6 @@ class Tests
 	 *  Null safety should work in constructors
 	 */
 	function new(a:String) {
-		var s:Null<String> = 'hello';
-		shouldFail(s.length);
 		if(Std.random(2) == 0) {
 			initializedInSomeBranchesOfConstructor = 'hello';
 			initializedInAllBranchesOfConstructor = 'hello';
@@ -55,6 +53,9 @@ class Tests
 			initializedInAllBranchesOfConstructor = 'hello';
 		}
 		initializedInConstructor = 'hello';
+		//make sure safety is checked in constructors
+		var s:Null<String> = 'hello';
+		shouldFail(s.length);
 	}
 
 	static function fieldAccess_onNullableValue_shouldFail():Void {
