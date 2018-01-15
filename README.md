@@ -19,7 +19,7 @@ make PLUGIN=path/to/haxelib/safety/git/src/ml/safety plugin
 
 ## Usage
 
-Add `-lib safety` to you hxml file.
+Add `-lib safety` to your hxml file.
 Use following flags:
 
 * `-D SAFETY=location1,location2` (required) - Use this flag to specify which location(s) you want plugin to check for null safety. This is a comma-separated list of packages, class names and filesystem paths. E.g. `-D SAFETY=Main,some.pack,another.pack.AnotherClass,path/to/src`. You can specify `-D SAFETY=ALL` instead which will check all the code, even std lib (not recommended)
@@ -108,20 +108,6 @@ trace(obj!.field!.length); //5
 * Safe navigation operator `!.` does not provide code completion.
 * Haxe was not designed with null safety in mind, so it's always possible `null` will come to your code from 3rd-party code or even from std lib.
 Safety doesn't perform automatic runtime checks for any values which you get from any code.
-* Safety runs after compiler typing phase. At this point everything is already typed. That means if another var infers a nullable type of null-checked var, then that new var is also nullable, but it's not automatically safe:
-```haxe
-var n1:Null<String> = getSomeStr();
-var s:String;
-if(n1 != null) {
-	s = n1; //OK
-	var n2 = n1;
-	$type(n2); //Null<String>
-	s = n2; //Compilation error
-	if(n2 != null) {
-		s = n2; //OK
-	}
-}
-```
 * Nullable fields and properties are not considered null-safe even after checking against `null`. Use safety extensions instead:
 ```haxe
 using Safety;
