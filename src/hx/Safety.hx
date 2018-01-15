@@ -8,6 +8,7 @@ import eval.vm.Context in EvalContext;
 
 using haxe.macro.PositionTools;
 using haxe.io.Path;
+using sys.FileSystem;
 
 typedef SafetyPluginApi = {
 	/** This method should be executed at initialization macro time */
@@ -48,7 +49,12 @@ class Safety {
 	static public function getPluginPath():String {
 		var pos = Context.getPosInfos(PositionTools.here());
 		var srcDir = pos.file.directory().directory();
-		return Path.join([srcDir, 'ml', 'safety.cmxs']);
+		var path = Path.join([srcDir, 'ml', 'safety.cmxs']); //development path
+		//if development binary does not exist, use pre built one
+		if(!path.exists()) {
+			path = Path.join([srcDir, 'ml', 'bin', Sys.systemName(), 'safety.cmxs']);
+		}
+		return path;
 	}
 #else
 

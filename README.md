@@ -13,7 +13,7 @@ haxelib git safety https://github.com/RealyUniqueName/Safety.git
 If you want to use this plugin with a newer version of Haxe you need to setup desired version of Haxe for development (see [Building Haxe from source](https://haxe.org/documentation/introduction/building-haxe.html)) and then
 ```
 cd path/to/haxe-source/
-PLUGIN=path/to/haxelib/safety/git/src/ml/safety make plugin
+make PLUGIN=path/to/haxelib/safety/git/src/ml/safety plugin
 ```
 
 ## Usage
