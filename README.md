@@ -22,7 +22,7 @@ Add `-lib safety` to you hxml file.
 Use following flags:
 
 * `-D SAFETY=location1,location2` (required) - Use this flag to specify which location(s) you want plugin to check for null safety. This is a comma-separated list of packages, class names and filesystem paths. E.g. `-D SAFETY=Main,some.pack,another.pack.AnotherClass,path/to/src`. You can specify `-D SAFETY=ALL` instead which will check all the code, even std lib (not recommended)
-* `-D SAFETY_ENABLE_SAFE_NAVIGATION` (optional) - Enables [safe navigation operator](https://en.wikipedia.org/wiki/Safe_navigation_operator) `!.` (Disabled by default. Does not provide code completion. Implemented via build macro which means penalties for compilation speed.)
+* `-D SAFETY_ENABLE_SAFE_NAVIGATION` (optional) - Enables [safe navigation operator](https://en.wikipedia.org/wiki/Safe_navigation_operator) `!.` (Disabled by default. Does not provide code completion. Implemented via build macro which means penalties for compilation speed on large code bases.)
 * `-D SAFETY_SILENT` (optional) - do not abort compilation on safety errors. You can handle safety errors manually in `Context.onAfterTyping(_ -> trace(Safety.plugin.getErrors()))`
 * `-D SAFETY_DEBUG` (optional) - prints additional information during safety checking.
 

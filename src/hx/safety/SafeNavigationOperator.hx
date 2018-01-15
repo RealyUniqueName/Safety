@@ -5,7 +5,7 @@ import haxe.macro.Expr;
 
 using haxe.macro.ExprTools;
 
-class SafeCallOperator {
+class SafeNavigationOperator {
 	static var foundSafeCall:Bool = false;
 
 	macro static public function build():Null<Array<Field>> {

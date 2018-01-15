@@ -27,7 +27,7 @@ class Safety {
 
 	static public function register() {
 		if(Context.defined('SAFETY_ENABLE_SAFE_NAVIGATION')) {
-			Compiler.addGlobalMetadata('', '@:build(safety.SafeCallOperator.build())');
+			Compiler.addGlobalMetadata('', '@:build(safety.SafeNavigationOperator.build())');
 		}
 		if(haxe.macro.Context.defined('display')) {
 			return;
