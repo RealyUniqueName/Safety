@@ -123,13 +123,13 @@ class Main {
 	}
 }
 ```
-* If a local var is captured and modified in a closure that var cannot be safe anymore:
+* If a local var is captured and modified in a closure with a nullable value, that var cannot be safe anymore:
 ```haxe
-var nullable:Null<String> = getSomeStr();
+var nullable:Null<String> = getSomeNullableStr();
 var str:String;
 if(nullable != null) {
 	str = nullable; //OK
-	doStuff(function() nullable = getSomeStr());
+	doStuff(function() nullable = getSomeNullableStr());
 	str = nullable; //Compilation error
 }
 ```
