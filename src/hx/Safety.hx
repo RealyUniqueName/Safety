@@ -23,7 +23,14 @@ typedef SafetyPluginApi = {
 
 class Safety {
 #if macro
-	static public var plugin(default,null):SafetyPluginApi = EvalContext.loadPlugin(getPluginPath());
+	static public var plugin(get,never):SafetyPluginApi;
+	static var _plugin:SafetyPluginApi;
+	static function get_plugin():SafetyPluginApi {
+		if(_plugin == null) {
+			_plugin = EvalContext.loadPlugin(getPluginPath());
+		}
+		return _plugin;
+	}
 
 	static public function register() {
 		if(!Context.defined('SAFETY_DISABLE_SAFE_NAVIGATION')) {
