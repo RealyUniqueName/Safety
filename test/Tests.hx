@@ -392,7 +392,7 @@ class Tests
 			};
 	}
 
-	static function switch_onNullableValue_shouldFail() {
+	static function switch_onNullableValue() {
 		var nullable:Null<String> = 'hello';
 		var s:String;
 
@@ -403,20 +403,19 @@ class Tests
 				s = nullable;
 		};
 
-		//TODO
-		// switch(nullable) {
-		// 	case null:
-		// 		shouldFail(s = nullable);
-		// 	case v if(Std.random(2) == 1):
-		// 		shouldFail(s = v);
-		// 		shouldFail(s = nullable);
-		// 	case v if(Std.random(2) == 1):
-		// 		s = v;
-		// 		s = nullable;
-		// 	case v:
-		// 		s = v;
-		// 		s = nullable;
-		// }
+		switch(nullable) {
+			case v if(Std.random(2) == 1):
+				shouldFail(s = v);
+				shouldFail(s = nullable);
+			case null:
+				shouldFail(s = nullable);
+			case v if(Std.random(2) == 1):
+				s = v;
+				s = nullable;
+			case v:
+				s = v;
+				s = nullable;
+		}
 	}
 
 	/**

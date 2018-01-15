@@ -787,8 +787,10 @@ class local_vars =
 		(**
 			Should be called for each local var declared
 		*)
-		method declare_var (v:tvar) =
-			self#get_current_scope#declare_var v
+		method declare_var ?(is_safe=false) (v:tvar) =
+			let scope = self#get_current_scope in
+			scope#declare_var v;
+			if is_safe then scope#add_to_safety v
 		(**
 			Check if local variable is guaranteed to not have a `null` value.
 		*)
@@ -1157,7 +1159,12 @@ class expr_checker report =
 			Don't assign nullable value to not-nullable variable on var declaration
 		*)
 		method private check_var v e p =
-			local_safety#declare_var v;
+			let is_safe =
+				match (reveal_expr e).eexpr with
+					| TLocal v2 -> is_nullable_type v.v_type && local_safety#is_safe v2
+					| _ -> false
+			in
+			local_safety#declare_var ~is_safe:is_safe v;
 			if not (self#can_pass_expr e v.v_type p) then
 				self#error "Cannot assign nullable value to not-nullable variable." p;
 			self#check_expr e
