@@ -52,6 +52,10 @@ if(nullable != null) {
 }
 s = nullable; //Compilation error
 s = (nullable == null ? 'hello' : nullable); //OK
+switch(nullable) {
+	case null:
+	case _: s = nullable; //OK
+}
 ```
 * Static extensions for convenience:
 ```haxe
