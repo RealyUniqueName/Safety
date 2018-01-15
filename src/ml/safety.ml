@@ -1325,7 +1325,7 @@ class plugin =
 		method run () =
 			let com = (get_ctx()).curapi.get_com() in
 			add_typing_filter com (fun types ->
-				let t = Timer.timer ["safety plugin"] in
+				let t = Gencommon.timer ["safety plugin"] in
 				let rec traverse com_type =
 					match com_type with
 						| TEnumDecl enm -> ()
