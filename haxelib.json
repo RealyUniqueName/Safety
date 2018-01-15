@@ -8,7 +8,5 @@
 	"releasenote"  : "Initial release.",
 	"classPath"    : "src/hx",
 	"contributors" : ["RealyUniqueName"],
-	"dependencies" : {
-		"exception" : ""
-	}
+	"dependencies" : {}
 }

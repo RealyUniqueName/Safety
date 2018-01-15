@@ -1,9 +1,9 @@
 package safety;
 
-import haxe.PosInfos;
+class NullPointerException {
+	public var message(default,null):String;
 
-class NullPointerException extends Exception {
-	public function new(msg:String = "Null pointer", ?pos:PosInfos) {
-		super(msg, pos);
+	public function new(msg:String = "Null pointer") {
+		message = msg;
 	}
 }
