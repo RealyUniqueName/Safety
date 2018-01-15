@@ -427,29 +427,8 @@ class Tests
 	// static function checkAgainstNull_assignCheckedValueToVarWithoutExplicitType_shouldTypeAsNotNullable() {
 	// 	var nullable:Null<String> = 'hello';
 	// 	var v = nullable != null ? nullable : 'world';
+	// 	$type(v); //Should print `String`
 	// 	var s:String = v;
-	// }
-
-	// static function switch_checkedAgainstNullInGuard() {
-	// 	var nullable:Null<String> = 'hello';
-	// 	var s:String;
-	// 	switch('world') {
-	// 		case v if(nullable == 'rnd'):
-	// 			shouldFail(s = v);
-	// 			shouldFail(s = nullable);
-	// 		case v if(nullable != null):
-	// 			shouldFail(s = v);
-	// 			s = nullable;
-	// 		case null:
-	// 			shouldFail(s = nullable);
-	// 		case v if(nullable == 'rnd'):
-	// 			s = v;
-	// 		case v
-	// 	}
-	// }
-
-	// static function abstractOverNul_consideredAsNullable() {
-	// 	var s:String
 	// }
 }
 
