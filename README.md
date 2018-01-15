@@ -10,7 +10,7 @@ Minimum supported Haxe version is `4.0.0-preview.2`
 ```
 haxelib git safety https://github.com/RealyUniqueName/Safety.git
 ```
-If you want to use this plugin with another version of Haxe you need to setup desired version of Haxe for development (see [Building Haxe from source](https://haxe.org/documentation/introduction/building-haxe.html)) and then
+If you want to use this plugin with a newer version of Haxe you need to setup desired version of Haxe for development (see [Building Haxe from source](https://haxe.org/documentation/introduction/building-haxe.html)) and then
 ```
 cd path/to/haxe-source/
 PLUGIN=path/to/haxelib/safety/git/src/ml/safety make plugin
@@ -22,7 +22,7 @@ Add `-lib safety` to you hxml file.
 Use following flags:
 
 * `-D SAFETY=location1,location2` (required) - Use this flag to specify which location(s) you want plugin to check for null safety. This is a comma-separated list of packages, class names and filesystem paths. E.g. `-D SAFETY=Main,some.pack,another.pack.AnotherClass,path/to/src`. You can specify `-D SAFETY=ALL` instead which will check all the code, even std lib (not recommended)
-* `-D SAFETY_ENABLE_SAFE_NAVIGATION` (optional) - Enables [safe navigation operator](https://en.wikipedia.org/wiki/Safe_navigation_operator) `!.` (Disabled by default. Does not provide code completion. Implemented via build macro which means penalties for compilation speed on large code bases.)
+* `-D SAFETY_DISABLE_SAFE_NAVIGATION` (optional) - Disables [safe navigation operator](https://en.wikipedia.org/wiki/Safe_navigation_operator) `!.` By default Safety handles `!.` for safe navigation. If you are using postfix `!` operator for other purposes, you can use this flag to prevent Safety from transforming it.
 * `-D SAFETY_SILENT` (optional) - do not abort compilation on safety errors. You can handle safety errors manually in `Context.onAfterTyping(_ -> trace(Safety.plugin.getErrors()))`
 * `-D SAFETY_DEBUG` (optional) - prints additional information during safety checking.
 
@@ -104,6 +104,7 @@ trace(obj!.field!.length); //5
 
 ## Limitations
 
+* Safe navigation operator `!.` does not provide code completion.
 * Haxe was not designed with null safety in mind, so it's always possible `null` will come to your code from 3rd-party code or even from std lib.
 Safety doesn't perform automatic runtime checks for any values which you get from any code.
 * Safety runs after compiler typing phase. At this point everything is already typed. That means if another var infers a nullable type of null-checked var, then that new var is also nullable, but it's not automatically safe:
