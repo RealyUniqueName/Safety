@@ -1,7 +1,7 @@
 # Safety
 
 This is a null safety implementation as a plugin for Haxe compiler. It's an attempt to push Haxe towards null safety implementation in the compiler.
-Use this plugin, report bugs and share your thoughts in [issues](https:/github.com/RealyUniqueName/Safety/issues).
+Use this plugin, report bugs and share your thoughts in [issues](https://github.com/RealyUniqueName/Safety/issues).
 Hopefully we can find the best approach to null safety together. And then with all the collected experience we will be able to propose a solid implementation to the compiler.
 
 ## Installation
