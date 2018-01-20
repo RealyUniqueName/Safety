@@ -1,8 +1,11 @@
-package;
+package cases;
 
 import Validator.shouldFail;
 
 using Safety;
+
+/** Stub test class for UTest */
+class TestCompileTime extends BaseCase {}
 
 private enum DummyEnum {
 	DummyOne;
@@ -18,8 +21,7 @@ abstract AWrap<T>(T) from T to T {
 }
 
 @:build(Validator.checkFields())
-class Tests
-{
+private class Test {
 	public var field:Null<String>;
 	// @:shouldWarn public var publiclyModifiableField:String = 'hello';
 	@:shouldFail var notInitializedField:Int;
@@ -33,7 +35,7 @@ class Tests
 	var initializedInAllBranchesOfConstructor:String;
 	@:shouldFail var initializedInSomeBranchesOfConstructor:String;
 
-	static public function safeCallOperator_shouldWork() {
+	static public function safeCallOperator_shouldPass() {
 		var obj:Null<{field:Null<String>}> = null;
 		var l = obj!.field!.length;
 	}
@@ -49,7 +51,7 @@ class Tests
 	/**
 	 *  Null safety should work in constructors
 	 */
-	function new(a:String) {
+	public function new(a:String) {
 		if(Std.random(2) == 0) {
 			initializedInSomeBranchesOfConstructor = 'hello';
 			initializedInAllBranchesOfConstructor = 'hello';
@@ -100,7 +102,7 @@ class Tests
 		var fn = function(a:String) {}
 		var v:Null<String> = 'hello';
 		shouldFail(fn(v));
-		shouldFail(new Tests(v));
+		shouldFail(new Test(v));
 	}
 
 	static function call_nullableValueToOptionalArgument_shouldPass() {
@@ -384,7 +386,7 @@ class Tests
 
 	static function objectDecl_passObjWithNullabelFieldToObjWithNotNullableField_shouldFail(?a:String) {
 		shouldFail(var o:{field:String} = {field:a});
-		shouldFail(o = new Tests(''));
+		shouldFail(o = new Test(''));
 		var arr:Array<Null<String>> = ['', a];
 		shouldFail(var q:{field:Array<String>} = {field:arr});
 	}

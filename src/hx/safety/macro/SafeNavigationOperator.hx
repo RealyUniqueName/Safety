@@ -1,4 +1,4 @@
-package safety;
+package safety.macro;
 
 import haxe.macro.Context;
 import haxe.macro.Expr;

@@ -41,7 +41,7 @@ class Validator {
 		if(errors.ok && warnings.ok) {
 			Sys.println('${warnings.passed} expected warnings spotted');
 			Sys.println('${errors.passed} expected errors spotted');
-			Sys.println('Tests passed.');
+			Sys.println('Compile-time tests passed.');
 		} else {
 			if(!Context.defined('VALIDATOR_DONT_FAIL')) {
 				Context.error('Tests failed. See warnings.', Context.currentPos());

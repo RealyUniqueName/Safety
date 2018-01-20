@@ -1,3 +1,4 @@
 src/ml/safety.*
 !src/ml/safety.ml
 dump/*
+bin/*

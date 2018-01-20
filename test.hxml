@@ -1,8 +1,10 @@
 -cp src/hx
 -cp test
--lib exception
+-lib utest
 -debug
-Tests
+-main Test
+-D analyzer-optimize
+-js bin/test.js
 
 --macro Validator.register()
 # -D VALIDATOR_DONT_FAIL

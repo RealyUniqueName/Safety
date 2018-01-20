@@ -1007,7 +1007,7 @@ class expr_checker report =
 					List.iter
 						(fun e ->
 							if not (self#can_pass_expr e item_type e.epos) then
-								self#error ("Cannot use value of " ^ (str_type e.etype) ^ " as an item in Array<" ^ (str_type item_type) ^ ">") e.epos
+								self#error ("Cannot use nullable value of " ^ (str_type e.etype) ^ " as an item in Array<" ^ (str_type item_type) ^ ">") e.epos
 						)
 						items;
 				| _ -> ()

@@ -1,9 +1,7 @@
 package safety;
 
-class NullPointerException {
-	public var message(default,null):String;
-
+class NullPointerException extends SafetyException {
 	public function new(msg:String = "Null pointer") {
-		message = msg;
+		super(msg);
 	}
 }
