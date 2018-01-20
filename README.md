@@ -108,6 +108,13 @@ trace(obj!.field!.length); //5
 * Safe navigation operator `!.` does not provide code completion.
 * Haxe was not designed with null safety in mind, so it's always possible `null` will come to your code from 3rd-party code or even from std lib.
 Safety doesn't perform automatic runtime checks for any values which you get from any code.
+* Out-of-bounds array read returns `null`, but Haxe types it without `Null<>`.
+```haxe
+var a:Array<String> = ["hello"];
+$type(a[100]); // String
+trace(a[100]); // null
+var s:String = a[100]; // Safety does not complain here, because `a[100]` is not `Null<String>`
+```
 * Nullable fields and properties are not considered null-safe even after checking against `null`. Use safety extensions instead:
 ```haxe
 using Safety;
