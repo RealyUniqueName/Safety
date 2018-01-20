@@ -348,7 +348,8 @@ private class Test {
 	static function arrayDeclaration_nullableItemInNotNullableArray_shouldFail(?s:String, ?i:Int) {
 		var arr:Array<String>;
 		shouldFail(arr = ['', s, '']);
-		var arr:Array<Int> = [1, shouldFail(i)];
+		function local(a:Array<Int>)
+		([1, shouldFail(i)]:Array<Int>);
 	}
 
 	static function tryCatch_shouldCheck(?a:String) {
@@ -387,7 +388,7 @@ private class Test {
 	static function objectDecl_passObjWithNullabelFieldToObjWithNotNullableField_shouldFail(?a:String) {
 		shouldFail(var o:{field:String} = {field:a});
 		shouldFail(o = new Test(''));
-		var arr:Array<Null<String>> = ['', a];
+		var arr = (['', a]:Array<Null<String>>);
 		shouldFail(var q:{field:Array<String>} = {field:arr});
 	}
 

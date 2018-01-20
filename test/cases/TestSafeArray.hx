@@ -24,7 +24,7 @@ class TestSafeArray extends BaseCase {
 
 	#if !SAFETY_DISABLE_SAFE_ARRAY
 	public function testArrayDeclaration_automaticallyConvertedToSafeArray() {
-		var a = ["hello"];
+		var a = ["hello", "wtf"];
 		//If `a` was automatically typed as `SafeArray` out-of-bounds reading will throw
 		assert.raises(() -> a[10], OutOfBoundsException);
 	}

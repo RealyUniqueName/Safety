@@ -46,10 +46,15 @@ class SafeAst {
 				e.map(transform);
 			#end
 			#if !SAFETY_DISABLE_SAFE_ARRAY
-			case macro [$exprs]:
+			//don't touch array declaration if a user is casting it manually
+			case macro ([$a{exprs}]:$type):
+				exprs = exprs.map(transform);
+				macro @:pos(e.pos) ([$a{exprs}]:$type);
+			//otherwise transform to ([...]:SafeArray<T>);
+			case macro [$a{exprs}]:
 				transformed = true;
 				exprs = exprs.map(transform);
-				macro @:pos(e.pos) ([$exprs]:SafeArray<safety.macro.Monomorph<0>>);
+				macro @:pos(e.pos) ([$a{exprs}]:SafeArray<safety.macro.Monomorph<0>>);
 			#end
 			case _:
 				e.map(transform);
