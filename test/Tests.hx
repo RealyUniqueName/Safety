@@ -11,7 +11,11 @@ private enum DummyEnum {
 
 typedef TWrap<T> = T;
 
-abstract AWrap<T>(T) from T to T {}
+abstract AWrap<T>(T) from T to T {
+	function abstracts_shouldBeChecked(?a:String) {
+		shouldFail(var s:String = a);
+	}
+}
 
 @:build(Validator.checkFields())
 class Tests
