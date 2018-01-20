@@ -65,7 +65,7 @@ trace(obj!.field!.length); //null
 obj = { field:'hello' };
 trace(obj!.field!.length); //5
 ```
-* `SafeArray<T>` (abstract over `Array<T>`) which behaves exactly like `Array<T>` except it prevents out-of-bounds reading/writing. See (Limitations)[#Limitations] to find out why you need it.
+* `SafeArray<T>` (abstract over `Array<T>`) which behaves exactly like `Array<T>` except it prevents out-of-bounds reading/writing. See [Limitations](#Limitations) to find out why you need it.
 * Static extensions for convenience:
 ```haxe
 using Safety;
