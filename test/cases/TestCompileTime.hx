@@ -159,7 +159,7 @@ private class Test {
 	}
 
 	static function arrayAccess_usingNullableIndex_shouldFail() {
-		var a = [0];
+		var a:Array<Int> = [0];
 		var idx:Null<Int> = 0;
 		shouldFail(a[idx]);
 	}

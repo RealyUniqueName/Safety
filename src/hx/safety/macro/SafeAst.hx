@@ -5,8 +5,8 @@ import haxe.macro.Expr;
 
 using haxe.macro.ExprTools;
 
-class SafeNavigationOperator {
-	static var foundSafeCall:Bool = false;
+class SafeAst {
+	static var transformed:Bool = false;
 
 	macro static public function build():Null<Array<Field>> {
 		if(!Safety.plugin.isInSafety()) {
@@ -21,28 +21,38 @@ class SafeNavigationOperator {
 				case FFun(_.expr => e): e;
 			}
 			if(expr != null) {
-				expr.expr = transformSafeCall(expr).expr;
+				expr.expr = transform(expr).expr;
 			}
 			fields.push(field);
 		}
-		if(foundSafeCall) {
-			foundSafeCall = false;
+
+		if(transformed) {
+			transformed = false;
 			return fields;
 		} else {
 			return null;
 		}
 	}
 
-	static function transformSafeCall(e:Expr):Expr {
-		switch(e) {
+	static function transform(e:Expr):Expr {
+		return switch(e) {
+			#if !SAFETY_DISABLE_SAFE_NAVIGATION
 			case macro $target!.$field:
-				foundSafeCall = true;
+				transformed = true;
 				e = macro @:pos(e.pos) {
 					var _v_ = $target;
 					_v_ == null ? null : _v_.$field;
 				};
+				e.map(transform);
+			#end
+			#if !SAFETY_DISABLE_SAFE_ARRAY
+			case macro [$exprs]:
+				transformed = true;
+				exprs = exprs.map(transform);
+				macro @:pos(e.pos) ([$exprs]:SafeArray<safety.macro.Monomorph<0>>);
+			#end
 			case _:
+				e.map(transform);
 		}
-		return e.map(transformSafeCall);
 	}
 }

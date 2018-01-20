@@ -3,6 +3,7 @@ package cases;
 import safety.OutOfBoundsException;
 
 class TestSafeArray extends BaseCase {
+
 	public function testRead_outOfBounds_shouldThrow() {
 		var a:SafeArray<Int> = [];
 		assert.raises(() -> a[0], OutOfBoundsException);
@@ -20,4 +21,12 @@ class TestSafeArray extends BaseCase {
 		a[a.length] = 5;
 		assert.same([5], a);
 	}
+
+	#if !SAFETY_DISABLE_SAFE_ARRAY
+	public function testArrayDeclaration_automaticallyConvertedToSafeArray() {
+		var a = ["hello"];
+		//If `a` was automatically typed as `SafeArray` out-of-bounds reading will throw
+		assert.raises(() -> a[10], OutOfBoundsException);
+	}
+	#end
 }
