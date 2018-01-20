@@ -115,6 +115,14 @@ $type(a[100]); // String
 trace(a[100]); // null
 var s:String = a[100]; // Safety does not complain here, because `a[100]` is not `Null<String>`
 ```
+* Out-of-bounds array write fills all positions between the last defined index and the newly written one with `null`. Safety cannot save you in this case.
+```haxe
+var a:Array<String> = ["hello"];
+a[2] = "world";
+trace(a); //["hello", null, "world"]
+var s:String = a[1]; //Safety cannot check this
+trace(s); //null
+```
 * Nullable fields and properties are not considered null-safe even after checking against `null`. Use safety extensions instead:
 ```haxe
 using Safety;
