@@ -28,7 +28,14 @@ class Safety {
 	static var _plugin:SafetyPluginApi;
 	static function get_plugin():SafetyPluginApi {
 		if(_plugin == null) {
-			_plugin = EvalContext.loadPlugin(getPluginPath());
+			try {
+				_plugin = EvalContext.loadPlugin(getPluginPath());
+			} catch(e:Dynamic) {
+				#if SAFETY_DEBUG
+				trace('Failed to load plugin: $e');
+				#end
+				Context.error('Current version of Safety is not compatible with your version of Haxe compiler.', Context.currentPos());
+			}
 		}
 		return _plugin;
 	}
