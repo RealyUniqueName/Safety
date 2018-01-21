@@ -34,7 +34,7 @@ class Safety {
 				#if SAFETY_DEBUG
 				trace('Failed to load plugin: $e');
 				#end
-				Context.error('Current version of Safety is not compatible with your version of Haxe compiler.', Context.currentPos());
+				Context.error('Current build of Safety is not compatible with your build of Haxe compiler. You need to rebuild Safety (see README.md)', Context.currentPos());
 			}
 		}
 		return _plugin;

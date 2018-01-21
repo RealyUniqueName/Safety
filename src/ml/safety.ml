@@ -1211,8 +1211,8 @@ class expr_checker report =
 		*)
 		method private check_args ?(callee="") args types =
 			match (args, types) with
-				| (a :: args, (arg_name, _, t) :: types) ->
-					if not (self#can_pass_expr a t a.epos) then begin
+				| (a :: args, (arg_name, optional, t) :: types) ->
+					if not optional && not (self#can_pass_expr a t a.epos) then begin
 						let fn_str = if callee = "" then "" else " of function \"" ^ callee ^ "\""
 						and arg_str = if arg_name = "" then "" else " \"" ^ arg_name ^ "\"" in
 						self#error ("Cannot pass nullable value to not-nullable argument" ^ arg_str ^ fn_str ^ ".") a.epos
