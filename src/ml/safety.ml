@@ -1140,10 +1140,15 @@ class expr_checker report =
 					local_safety#process_or left_expr right_expr self#is_nullable_expr self#check_expr
 				| OpAssign ->
 					if not (self#can_pass_expr right_expr left_expr.etype p) then
-						self#error "Cannot assign nullable value here." p
+						begin
+							self#error "Cannot assign nullable value here." p;
+							check_both()
+						end
 					else
-						local_safety#handle_assignment self#is_nullable_expr left_expr right_expr;
-					check_both()
+						begin
+							check_both();
+							local_safety#handle_assignment self#is_nullable_expr left_expr right_expr;
+						end
 				| _->
 					if self#is_nullable_expr left_expr || self#is_nullable_expr right_expr then
 						self#error "Cannot perform binary operation on nullable value." p;
