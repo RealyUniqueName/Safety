@@ -92,14 +92,14 @@ class Safety {
 	 *  Returns `null` otherwise.
 	 */
 	static public inline function let<T,V>(value:Null<T>, callback:T->V):Null<V> {
-		return value == null ? null : callback(unsafe(value));
+		return value == null ? null : callback(value);
 	}
 
 	/**
 	 *  Passes `value` to `callback` if `value` is not null.
 	 */
 	static public inline function run<T>(value:Null<T>, callback:T->Void) {
-		if(value != null) callback(unsafe(value));
+		if(value != null) callback(value);
 	}
 
 	/**
@@ -107,17 +107,8 @@ class Safety {
 	 *  Returns `value`.
 	 */
 	static public inline function apply<T>(value:Null<T>, callback:T->Void):Null<T> {
-		if(value != null) callback(unsafe(value));
+		if(value != null) callback(value);
 		return value;
-	}
-
-	/**
-	 *  TODO
-	 *  Elvis operator implementation.
-	 *  Or maybe make it a build macro which transforms postifx `!` operator.
-	 */
-	static public inline function sh<T>(value:Null<T>):T {
-		throw "TODO";
 	}
 #end
 }

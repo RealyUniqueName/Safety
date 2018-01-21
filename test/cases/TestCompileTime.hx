@@ -20,6 +20,14 @@ abstract AWrap<T>(T) from T to T {
 	}
 }
 
+typedef AnonAsClass = {
+	@:optional var optional:String;
+}
+
+typedef AnonAsStruct = {
+	?optional:String
+}
+
 @:build(Validator.checkFields())
 private class Test {
 	public var field:Null<String>;
@@ -425,6 +433,12 @@ private class Test {
 		}
 	}
 
+	static function anonymousObjects() {
+		var o:AnonAsClass = {};
+		shouldFail(var s:String = o.optional);
+		var o:AnonAsStruct = {};
+		shouldFail(var s:String = o.optional);
+	}
 	/**
 	 *
 	 *  TODO far far future
