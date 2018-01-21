@@ -10,11 +10,11 @@ Minimum supported Haxe version is `4.0.0-preview.2`
 ```
 haxelib git safety https://github.com/RealyUniqueName/Safety.git
 ```
-I'm going to include pre built binaries for x64 systems (Linux, Windows, Mac) and Haxe 4.0.0-preview.2. But currently only Linux binary is provided.
+Pre-built binaries for x64 systems (Linux, Windows, Mac) and Haxe 4.0.0-preview.2 are included.
 If you want to use this plugin with another OS, arch or a newer version of Haxe you need to setup desired version of Haxe for development (see [Building Haxe from source](https://haxe.org/documentation/introduction/building-haxe.html)) and then
 ```
 cd path/to/haxe-source/
-make PLUGIN=path/to/haxelib/safety/git/src/ml/safety plugin
+make PLUGIN=path/to/safety/src/ml/safety plugin
 ```
 
 ## Usage
