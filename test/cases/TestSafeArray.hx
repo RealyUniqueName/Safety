@@ -28,5 +28,14 @@ class TestSafeArray extends BaseCase {
 		//If `a` was automatically typed as `SafeArray` out-of-bounds reading will throw
 		assert.raises(() -> a[10], OutOfBoundsException);
 	}
+
+	public function testArrayDeclaration_inSwitchAndCase_shouldNotBeConverted() {
+		//this test should pass compilation
+		switch([Std.random(2), Std.random(2)]) {
+			case [0, 1]: assert.pass();
+			case [1, 0]: assert.pass();
+			case _: assert.pass();
+		}
+	}
 	#end
 }

@@ -46,6 +46,24 @@ class SafeAst {
 				e.map(transform);
 			#end
 			#if !SAFETY_DISABLE_SAFE_ARRAY
+			//don't touch patterns in `case`
+			case macro ${{expr:ESwitch(target, cases, defaultCase)}}:
+				target = switch(target) {
+					case macro [$a{exprs}]:
+						macro @:pos(target.pos) [$a{exprs.map(transform)}];
+					case macro ([$a{exprs}]):
+						macro @:pos(target.pos) ([$a{exprs.map(transform)}]);
+					case _:
+						transform(target);
+				}
+				for(c in cases) {
+					if(c.guard != null) c.guard = transform(c.guard);
+					if(c.expr != null) c.expr = transform(c.expr);
+				}
+				if(defaultCase != null && defaultCase.expr != null) {
+					defaultCase = transform(defaultCase);
+				}
+				return {expr:ESwitch(target, cases, defaultCase), pos:e.pos};
 			//don't touch array declaration if a user is casting it manually
 			case macro ([$a{exprs}]:$type):
 				exprs = exprs.map(transform);
