@@ -129,7 +129,7 @@ Safety doesn't perform automatic runtime checks for any values which you get fro
 var a:Array<String> = ["hello"];
 $type(a[100]); // String
 trace(a[100]); // null
-var s:String = a[100]; // Safety does not complain here, because `a[100]` is not `Null<String>`
+var s:String = a[100]; // Safety does not complain here, because `a[100]` is not `Null<String>`, but just `String`
 ```
 * Out-of-bounds array write fills all positions between the last defined index and the newly written one with `null`. Safety cannot save you in this case.
 ```haxe
