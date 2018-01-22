@@ -66,6 +66,7 @@ private class Test {
 		} else {
 			initializedInAllBranchesOfConstructor = 'hello';
 		}
+		var notInitializedYet = shouldFail(initializedInConstructor);
 		initializedInConstructor = 'hello';
 		//make sure safety is checked in constructors
 		var s:Null<String> = 'hello';

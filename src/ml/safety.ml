@@ -1320,24 +1320,34 @@ class class_checker cls report =
 							| None -> Hashtbl.add fields_to_initialize f.cf_name f
 				)
 				cls.cl_ordered_fields;
+			let rec check_unsafe_usage init_list e =
+				if Hashtbl.length init_list > 0 then
+					match e.eexpr with
+						| TField ({ eexpr = TConst TThis }, FInstance (_, _, field)) when Hashtbl.mem init_list field.cf_name ->
+							checker#error ("Cannot use field " ^ field.cf_name ^ " until initialization.") e.epos
+						| _ ->
+							iter (check_unsafe_usage init_list) e
+			in
 			let rec traverse init_list e =
-				match e.eexpr with
+				(match e.eexpr with
 					| TBinop (OpAssign, { eexpr = TField ({ eexpr = TConst TThis }, FInstance (_, _, f)) }, right_expr) ->
 						Hashtbl.remove init_list f.cf_name;
-						traverse init_list right_expr
-					| TWhile (_, body, DoWhile) ->
-						traverse init_list body
+						ignore (traverse init_list right_expr)
+					| TWhile (condition, body, DoWhile) ->
+						check_unsafe_usage init_list condition;
+						ignore (traverse init_list body)
 					| TBlock exprs ->
-						List.iter (fun e -> ignore (traverse init_list e)) exprs;
-						init_list
+						List.iter (fun e -> ignore (traverse init_list e)) exprs
 					| TIf (_, if_block, Some else_block) ->
 						let if_init_list = traverse (Hashtbl.copy init_list) if_block
 						and else_init_list = traverse (Hashtbl.copy init_list) else_block in
 						Hashtbl.clear init_list;
 						Hashtbl.iter (Hashtbl.replace init_list) if_init_list;
-						Hashtbl.iter (Hashtbl.replace init_list) else_init_list;
-						init_list
-					| _ -> init_list
+						Hashtbl.iter (Hashtbl.replace init_list) else_init_list
+					| _ ->
+						check_unsafe_usage init_list e
+				);
+				init_list
 			in
 			match cls.cl_constructor with
 				| Some { cf_expr = Some { eexpr = TFunction { tf_expr = e } } } ->
@@ -1345,8 +1355,8 @@ class class_checker cls report =
 					Hashtbl.iter
 						(fun name field ->
 							checker#error
-										("Field \"" ^ name ^ "\" is not nullable thus should have an initial value or should be initialized in constructor.")
-										field.cf_pos
+								("Field \"" ^ name ^ "\" is not nullable thus should have an initial value or should be initialized in constructor.")
+								field.cf_pos
 						)
 						fields_to_initialize
 				| _ -> ()
