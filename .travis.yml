@@ -1,0 +1,28 @@
+sudo: required
+dist: trusty
+
+language: haxe
+
+os:
+  - linux
+  - osx
+
+haxe:
+  - 4.0.0-preview.2
+
+install:
+  - haxelib install travix
+  - haxelib run travix install
+
+script:
+  - then haxelib run travix interp
+  - haxelib run travix neko
+  - haxelib run travix python
+  - haxelib run travix node
+  - haxelib run travix java
+  - then haxelib run travix cpp
+  # Travix executes tests without --debug for c#, which leads to losing line numbers
+  # - haxelib run travix cs
+  - haxelib run travix php
+  #Invalid lua setup on OSX. See https://github.com/back2dos/travix/issues/78
+  - if [ `uname` = "Linux" ] then haxelib run travix lua; fi
