@@ -79,12 +79,12 @@ Available extensions:
 /**
 *  Returns `value` if it is not `null`. Otherwise returns `defaultValue.
 */
-static public function or<T>(value:Null<T>, defaultValue:T):T;
+static public inline function or<T>(value:Null<T>, defaultValue:T):T;
 /**
 *  Returns `value` if it is not `null`. Otherwise throws an exception.
 *  @throws NullPointerException if `value` is `null`.
 */
-static public function sure<T>(value:Null<T>):T;
+static public inline function sure<T>(value:Null<T>):T;
 /**
 *  Just returns `value` without any checks, but typed as not-nullable. Use at your own risk.
 */
@@ -103,6 +103,10 @@ static public inline function run<T>(value:Null<T>, callback:T->Void):Void;
 *  Returns `value`.
 */
 static public inline function apply<T>(value:Null<T>, callback:T->Void):Null<T>;
+/**
+*  Prints `true` if provided expression can not evaluate to `null` at runtime. Prints `false` otherwise.
+*/
+macro static public function isSafe(expr:Expr):ExprOf<Void>
 ```
 
 ## Limitations
@@ -137,6 +141,15 @@ class Main {
 			str = nullable; //Compilation error.
 		}
 		str = nullable.or('hello');
+	}
+}
+```
+* If a local var is captured in a closure, it cannot be safe inside that closure:
+```haxe
+var a:Null<String> = getSomeStr();
+var fn = function() {
+	if(a != null) {
+		var s:String = a; //Compilation error
 	}
 }
 ```

@@ -71,7 +71,7 @@ let rec is_nullable_type t =
 let rec unfold_null t =
 	match t with
 		| TMono r -> (match !r with None -> t | Some t -> unfold_null t)
-		| TAbstract ({ a_path = ([],"Null") }, [t]) -> t
+		| TAbstract ({ a_path = ([],"Null") }, [t]) -> unfold_null t
 		| TLazy f -> unfold_null (lazy_type f)
 		| TType (t,tl) -> unfold_null (apply_params t.t_params tl t.t_type)
 		| _ -> t
@@ -731,7 +731,7 @@ class safety_scope (scope_type:scope_type) =
 			Add variable to the list of safe locals.
 		*)
 		method add_to_safety v =
-			Hashtbl.add safe_locals v.v_id v
+			Hashtbl.replace safe_locals v.v_id v
 		(**
 			Remove variable from the list of safe locals.
 		*)
@@ -871,22 +871,26 @@ class local_vars =
 		*)
 		method handle_assignment is_nullable_expr left_expr (right_expr:texpr) =
 			match (reveal_expr left_expr).eexpr with
-				| TLocal v when is_nullable_expr right_expr ->
-					let captured = ref false in
-					let rec traverse (lst:safety_scope list) =
-						match lst with
-							| [] -> ()
-							| current :: rest ->
-								if current#owns_var v then
-									current#remove_from_safety ~forever:!captured v
-								else begin
-									captured := current#get_type = STClosure;
-									current#remove_from_safety ~forever:!captured v;
-									traverse rest
-								end
-					in
-					traverse scopes
-					(* List.iter (fun scope -> scope#remove_from_safety v) scopes *)
+				| TLocal v ->
+					if is_nullable_expr right_expr then
+						begin
+							let captured = ref false in
+							let rec traverse (lst:safety_scope list) =
+								match lst with
+									| [] -> ()
+									| current :: rest ->
+										if current#owns_var v then
+											current#remove_from_safety ~forever:!captured v
+										else begin
+											captured := current#get_type = STClosure;
+											current#remove_from_safety ~forever:!captured v;
+											traverse rest
+										end
+							in
+							traverse scopes
+						end
+					else if is_nullable_type v.v_type then
+						self#get_current_scope#add_to_safety v
 				| _ -> ()
 	end
 
@@ -918,8 +922,13 @@ class expr_checker report =
 		method is_nullable_expr e =
 			match e.eexpr with
 				| TConst TNull -> true
+				| TConst _ -> false
+				(* Safety.unsafe() *)
+				| TCall ({ eexpr = TField (_, FStatic ({ cl_path = ([], "Safety")}, { cf_name = "unsafe" })) }, _) -> false
 				| TParenthesis e -> self#is_nullable_expr e
+				| TMeta (_, e) -> self#is_nullable_expr e
 				| TLocal v -> not (local_safety#is_safe v)
+				| TThrow _ -> false
 				| TBlock exprs ->
 					(match exprs with
 						| [] -> false
@@ -955,7 +964,6 @@ class expr_checker report =
 			Should be called for the root expressions of a method or for then initialization expressions of fields.
 		*)
 		method check_root_expr e =
-			(* print_endline (s_expr (fun t -> s_type (print_context()) t) e); *)
 			self#check_expr e;
 			local_safety#clear;
 			return_types <- [];
@@ -979,8 +987,7 @@ class expr_checker report =
 				| TNew (_, _, args) -> List.iter self#check_expr args
 				| TUnop (_, _, expr) -> self#check_unop expr e.epos
 				| TFunction fn -> self#check_function fn
-				| TVar (v, Some init_expr) -> self#check_var v init_expr e.epos
-				| TVar (_, None) -> ()
+				| TVar (v, init_expr) -> self#check_var v init_expr e.epos
 				| TBlock exprs -> List.iter self#check_expr exprs
 				| TFor _ -> self#check_for e
 				| TIf _ -> self#check_if e
@@ -993,7 +1000,6 @@ class expr_checker report =
 				| TContinue -> ()
 				| TThrow expr -> self#check_throw expr e.epos
 				| TCast (expr, _) -> self#check_cast expr e.etype e.epos
-				(* | TMeta ((Meta.Custom ":unsafe", _, _), _) -> print_endline "UNSAFE META!" *)
 				| TMeta (_, e) -> self#check_expr e
 				| TEnumIndex idx -> self#check_enum_index idx
 				| TEnumParameter (e, _, _) -> self#check_expr e (** Checking enum value itself is not needed here because this expr always follows after TEnumIndex *)
@@ -1066,9 +1072,9 @@ class expr_checker report =
 			Don't cast nullable expressions to not-nullable types
 		*)
 		method private check_cast expr to_type p =
+			self#check_expr expr;
 			if not (self#can_pass_expr expr to_type p) then
-				self#error "Cannot cast nullable value to not nullable type." p;
-			self#check_expr expr
+				self#error "Cannot cast nullable value to not nullable type." p
 		(**
 			Check safety in a function
 		*)
@@ -1163,16 +1169,19 @@ class expr_checker report =
 		(**
 			Don't assign nullable value to not-nullable variable on var declaration
 		*)
-		method private check_var v e p =
-			let is_safe =
-				match (reveal_expr e).eexpr with
-					| TLocal v2 -> is_nullable_type v.v_type && local_safety#is_safe v2
-					| _ -> false
-			in
-			local_safety#declare_var ~is_safe:is_safe v;
-			if not (self#can_pass_expr e v.v_type p) then
-				self#error "Cannot assign nullable value to not-nullable variable." p;
-			self#check_expr e
+		method private check_var v init p =
+			match init with
+				| None -> local_safety#declare_var v
+				| Some e ->
+					let is_safe =
+						match (reveal_expr e).eexpr with
+							| TLocal v2 -> is_nullable_type v.v_type && local_safety#is_safe v2
+							| _ -> false
+					in
+					local_safety#declare_var ~is_safe:is_safe v;
+					if not (self#can_pass_expr e v.v_type p) then
+						self#error "Cannot assign nullable value to not-nullable variable." p;
+					self#check_expr e
 		(**
 			Make sure nobody tries to access a field on a nullable value
 		*)
@@ -1201,16 +1210,25 @@ class expr_checker report =
 				self#error "Cannot call a nullable value." callee.epos;
 			self#check_expr callee;
 			List.iter self#check_expr args;
-			match follow callee.etype with
-				| TFun (types, _) ->
-					let fn_name = match (reveal_expr callee).eexpr with
-						| TField (_, access) -> field_name access
-						| TIdent fn_name -> fn_name
-						| TLocal { v_name = fn_name } -> fn_name
-						| _ -> ""
-					in
-					self#check_args ~callee:fn_name args types
-				| _ -> ()
+			match callee.eexpr with
+				(* Handle `Safety.isSafe(localVar)` *)
+				| TField (_, FStatic ({ cl_path = ([], "Safety") }, { cf_name = "_isSafe"})) ->
+					(match args with
+						| [ e ] -> self#warning (string_of_bool (not (self#is_nullable_expr e))) e.epos
+						| _ -> self#error "Invalid arguments for Safety.isSafe*()" callee.epos
+					)
+				(* Handle other calls *)
+				| _ ->
+					match follow callee.etype with
+						| TFun (types, _) ->
+							let fn_name = match (reveal_expr callee).eexpr with
+								| TField (_, access) -> field_name access
+								| TIdent fn_name -> fn_name
+								| TLocal { v_name = fn_name } -> fn_name
+								| _ -> ""
+							in
+							self#check_args ~callee:fn_name args types
+						| _ -> ()
 		(**
 			Check if specified expressions can be passed to a call which expects `types`.
 		*)

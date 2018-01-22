@@ -137,6 +137,13 @@ private class Test {
 		a = b;
 	}
 
+	static function assign_safeValueToAnotherNullable_shouldInferSafety() {
+		var s:Null<String> = null;
+		var n;
+		n = (s == null ? "hello" : s);
+		var t:String = n;
+	}
+
 	static function binop_withNullableValue_shouldFail() {
 		var a:Null<Int> = 0;
 		var b = 10;
@@ -221,7 +228,8 @@ private class Test {
 			a = 'hello'; //not nullable expr
 			s = a;
 			if(Std.random(2) > 0) {
-				a = ('world':Null<String>); //nullable expr
+				var arr = [null, 'hello'];
+				a = arr[0]; //nullable expr
 			}
 			shouldFail(s = a);
 		}

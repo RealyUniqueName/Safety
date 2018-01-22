@@ -23,6 +23,14 @@ typedef SafetyPluginApi = {
 #end
 
 class Safety {
+	/**
+	 *  Prints `true` at compile time if provided expression can not be evaluated to `null` at runtime. Prints `false` otherwise.
+	 */
+	macro static public function isSafe(expr:Expr):ExprOf<Void> {
+		return macro @:pos(expr.pos) @:privateAccess Safety._isSafe($expr);
+	}
+	static function _isSafe(ident:Dynamic):Void {}; //Handled in plugin
+
 #if macro
 	static public var plugin(get,never):SafetyPluginApi;
 	static var _plugin:SafetyPluginApi;
@@ -68,16 +76,18 @@ class Safety {
 	/**
 	 *  Returns `value` if it is not `null`. Otherwise returns `defaultValue.
 	 */
-	static public function or<T>(value:Null<T>, defaultValue:T):T {
-		return value == null ? defaultValue : value;
+	static public inline function or<T>(value:Null<T>, defaultValue:T):T {
+		var tmp = value; //temp var is required if `value` is captured in a closure, because captured vars cannot be safe.
+		return tmp == null ? defaultValue : tmp;
 	}
 
 	/**
 	 *  Returns `value` if it is not `null`. Otherwise throws an exception.
 	 *  @throws NullPointerException if `value` is `null`.
 	 */
-	static public function sure<T>(value:Null<T>):T {
-		return value == null ? throw new safety.NullPointerException() : value;
+	static public inline function sure<T>(value:Null<T>):T {
+		var tmp = value;
+		return tmp == null ? throw new safety.NullPointerException() : tmp;
 	}
 
 	/**
@@ -92,14 +102,16 @@ class Safety {
 	 *  Returns `null` otherwise.
 	 */
 	static public inline function let<T,V>(value:Null<T>, callback:T->V):Null<V> {
-		return value == null ? null : callback(value);
+		var tmp = value;
+		return tmp == null ? null : callback(tmp);
 	}
 
 	/**
 	 *  Passes `value` to `callback` if `value` is not null.
 	 */
 	static public inline function run<T>(value:Null<T>, callback:T->Void) {
-		if(value != null) callback(value);
+		var tmp = value;
+		if(tmp != null) callback(tmp);
 	}
 
 	/**
@@ -107,7 +119,8 @@ class Safety {
 	 *  Returns `value`.
 	 */
 	static public inline function apply<T>(value:Null<T>, callback:T->Void):Null<T> {
-		if(value != null) callback(value);
+		var tmp = value;
+		if(tmp != null) callback(tmp);
 		return value;
 	}
 #end
