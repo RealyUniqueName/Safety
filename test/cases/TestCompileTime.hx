@@ -322,6 +322,21 @@ private class Test {
 		}
 	}
 
+	static function checkAgainstNull_deadEndIfNull_shouldPassAfterCheckedBlock(?a:String, ?b:String) {
+		if(a == null) {
+			return;
+		}
+		//function execution will continue only if `a` is not null
+		var s:String = a;
+
+		if(b != null) {
+		} else {
+			throw "Dead end";
+		}
+		//function execution will continue only if `b` is not null
+		var s:String = b;
+	}
+
 	static function return_nullableValueFromNotNullableResult_shouldFail(?a:String):String {
 		function local():String {
 			shouldFail(return a);

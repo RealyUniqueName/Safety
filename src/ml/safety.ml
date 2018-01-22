@@ -66,6 +66,20 @@ let rec is_nullable_type t =
 			false
 
 (**
+	Checks if execution of provided expression is guaranteed to be terminated with `return` or `throw`.
+*)
+let rec is_dead_end e =
+	match e.eexpr with
+		| TThrow _ -> true
+		| TReturn _ -> true
+		| TWhile (_, body, DoWhile) -> is_dead_end body
+		| TIf (_, if_body, Some else_body) -> is_dead_end if_body && is_dead_end else_body
+		| TBlock exprs -> List.exists is_dead_end exprs
+		| TMeta (_, e) -> is_dead_end e
+		| TCast (e, _) -> is_dead_end e
+		| _ -> false
+
+(**
 	If `t` represents `Null<SomeType>` this function returns `SomeType`.
 *)
 let rec unfold_null t =
@@ -842,13 +856,23 @@ class local_vars =
 					body_callback if_body;
 					List.iter self#get_current_scope#remove_from_safety not_nulls;
 					(** execute `else_body` with known not-null variables *)
+					let handle_dead_end body safe_vars =
+						if is_dead_end body then
+							List.iter self#get_current_scope#add_to_safety safe_vars
+					in
 					(match else_body with
-						| None -> ()
+						| None ->
+							(** If `if_body` terminates execution, then bypassing `if` means `nulls` are safe now *)
+							handle_dead_end if_body nulls
 						| Some else_body ->
 							List.iter self#get_current_scope#add_to_safety nulls;
 							body_callback else_body;
-							List.iter self#get_current_scope#remove_from_safety nulls
-					)
+							List.iter self#get_current_scope#remove_from_safety nulls;
+							(** If `if_body` terminates execution, then bypassing `if` means `nulls` are safe now *)
+							handle_dead_end if_body nulls;
+							(** If `else_body` terminates execution, then bypassing `else` means `not_nulls` are safe now *)
+							handle_dead_end else_body not_nulls
+					);
 				| _ -> fail ~msg:"Expected TIf" expr.epos __POS__
 		(**
 			Handle boolean AND outside of `if` condition.

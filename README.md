@@ -45,7 +45,7 @@ fn(nullable); //Compilation error. Function argument was not declared with `Null
 var nullables:Array<Null<String>> = ['hello', null, 'world'];
 var a:Array<Int> = nullables; //Compilation error. Array<Null<String>> cannot be assigned to Array<String>
 ```
-* Local variables checked against `null` are considered safe inside of a scope covered with that null-check:
+* Local variables checked against `null` are considered _safe_ inside of a scope covered with that null-check:
 ```haxe
 var nullable:Null<String> = getSomeStr();
 var s:String = nullable; //Compilation error
@@ -57,6 +57,16 @@ s = (nullable == null ? 'hello' : nullable); //OK
 switch(nullable) {
 	case null:
 	case _: s = nullable; //OK
+}
+```
+* Control flow is also taken into account:
+```haxe
+function doStuff(a:Null<String>) {
+	if(a == null) {
+		return;
+	}
+	//From here `a` is safe, because function execution will continue only if `a` is not null
+	var s:String = a; //OK
 }
 ```
 * Safe navigation operator
