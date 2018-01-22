@@ -1,6 +1,7 @@
 -cp src/hx
 -cp test
 -lib utest
+-lib exception
 -debug
 -main Test
 -D analyzer-optimize

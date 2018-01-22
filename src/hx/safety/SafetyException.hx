@@ -1,9 +1,5 @@
 package safety;
 
-class SafetyException {
-	public var message(default,null):String;
+import haxe.Exception;
 
-	public function new(msg:String) {
-		message = msg;
-	}
-}
+class SafetyException extends Exception {}
