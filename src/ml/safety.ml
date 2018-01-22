@@ -1300,67 +1300,56 @@ class class_checker cls report =
 									checker#error
 										("Field \"" ^ field.cf_name ^ "\" is not nullable thus should have an initial value.")
 										field.cf_pos
-								else if not (self#is_initialized_in_constructor field) then
-									checker#error
-										("Field \"" ^ field.cf_name ^ "\" is not nullable thus should have an initial value or should be initialized in constructor.")
-										field.cf_pos
 							| Some e ->
 								if checker#is_nullable_expr e then
 									checker#error ("Cannot set nullable initial value for not-nullable field \"" ^ field.cf_name ^ "\".") field.cf_pos
 			in
 			List.iter (check_field false) cls.cl_ordered_fields;
-			List.iter (check_field true) cls.cl_ordered_statics
+			List.iter (check_field true) cls.cl_ordered_statics;
+			self#check_fields_initialization_in_constructor ()
 		(**
-			Check if `field` is initialized in constructor
+			Check instance fields without initial values are properly initialized in constructor
 		*)
-		method private is_initialized_in_constructor field =
-			if constructor_checked then
-				Hashtbl.mem initialized_in_constructor field.cf_name
-			else begin
-				constructor_checked <- true;
-				let rec traverse e =
-					match e.eexpr with
-						| TBinop (OpAssign, { eexpr = TField ({ eexpr = TConst TThis }, FInstance (_, _, f)) }, _) ->
-							let result = Hashtbl.create 1 in
-							Hashtbl.add result f.cf_name f;
-							result
-						| TWhile (_, body, DoWhile) ->
-							traverse body
-						| TBlock exprs ->
-							let result = Hashtbl.create (List.length exprs) in
-							List.iter
-								(fun e ->
-									Hashtbl.iter
-										(fun name f -> Hashtbl.replace result name f)
-										(traverse e)
-								)
-								exprs;
-							result
-						| TIf (_, if_block, Some else_block) ->
-							let result = Hashtbl.create 10
-							and initialized_in_if = traverse if_block
-							and initialized_in_else = traverse else_block in
-							Hashtbl.iter
-								(fun name f ->
-									if Hashtbl.mem initialized_in_else name then
-										Hashtbl.replace result name f
-								)
-								initialized_in_if;
-							Hashtbl.iter
-								(fun name f ->
-									if Hashtbl.mem initialized_in_if name then
-										Hashtbl.replace result name f
-								)
-								initialized_in_else;
-							result
-						| _ -> Hashtbl.create 0
-				in
-				match cls.cl_constructor with
-					| Some { cf_expr = Some { eexpr = TFunction { tf_expr = e } } } ->
-						initialized_in_constructor <- traverse e;
-						Hashtbl.mem initialized_in_constructor field.cf_name
-					| _ -> false
-			end
+		method private check_fields_initialization_in_constructor () =
+			let fields_to_initialize = Hashtbl.create 20 in
+			List.iter
+				(fun f ->
+					if not (is_nullable_type f.cf_type) then
+						match f.cf_expr with
+							| Some _ -> ()
+							| None -> Hashtbl.add fields_to_initialize f.cf_name f
+				)
+				cls.cl_ordered_fields;
+			let rec traverse init_list e =
+				match e.eexpr with
+					| TBinop (OpAssign, { eexpr = TField ({ eexpr = TConst TThis }, FInstance (_, _, f)) }, right_expr) ->
+						Hashtbl.remove init_list f.cf_name;
+						traverse init_list right_expr
+					| TWhile (_, body, DoWhile) ->
+						traverse init_list body
+					| TBlock exprs ->
+						List.iter (fun e -> ignore (traverse init_list e)) exprs;
+						init_list
+					| TIf (_, if_block, Some else_block) ->
+						let if_init_list = traverse (Hashtbl.copy init_list) if_block
+						and else_init_list = traverse (Hashtbl.copy init_list) else_block in
+						Hashtbl.clear init_list;
+						Hashtbl.iter (Hashtbl.replace init_list) if_init_list;
+						Hashtbl.iter (Hashtbl.replace init_list) else_init_list;
+						init_list
+					| _ -> init_list
+			in
+			match cls.cl_constructor with
+				| Some { cf_expr = Some { eexpr = TFunction { tf_expr = e } } } ->
+					ignore (traverse fields_to_initialize e);
+					Hashtbl.iter
+						(fun name field ->
+							checker#error
+										("Field \"" ^ name ^ "\" is not nullable thus should have an initial value or should be initialized in constructor.")
+										field.cf_pos
+						)
+						fields_to_initialize
+				| _ -> ()
 	end
 
 class plugin =
