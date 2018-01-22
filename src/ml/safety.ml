@@ -1323,8 +1323,16 @@ class class_checker cls report =
 			let rec check_unsafe_usage init_list e =
 				if Hashtbl.length init_list > 0 then
 					match e.eexpr with
-						| TField ({ eexpr = TConst TThis }, FInstance (_, _, field)) when Hashtbl.mem init_list field.cf_name ->
-							checker#error ("Cannot use field " ^ field.cf_name ^ " until initialization.") e.epos
+						| TField ({ eexpr = TConst TThis }, FInstance (_, _, field)) ->
+							if Hashtbl.mem init_list field.cf_name then
+								checker#error ("Cannot use field " ^ field.cf_name ^ " until initialization.") e.epos
+						| TField ({ eexpr = TConst TThis }, FClosure (_, field)) ->
+							checker#error ("Cannot use method " ^ field.cf_name ^ " until all instance fields are initialized.") e.epos;
+						| TCall ({ eexpr = TField ({ eexpr = TConst TThis }, FInstance (_, _, field)) }, args) ->
+							checker#error ("Cannot call method " ^ field.cf_name ^ " until all instance fields are initialized.") e.epos;
+							List.iter (check_unsafe_usage init_list) args
+						| TConst TThis ->
+							checker#error "Cannot use \"this\" until all instance fields are initialized." e.epos
 						| _ ->
 							iter (check_unsafe_usage init_list) e
 			in

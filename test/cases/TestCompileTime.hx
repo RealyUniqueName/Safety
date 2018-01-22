@@ -66,12 +66,17 @@ private class Test {
 		} else {
 			initializedInAllBranchesOfConstructor = 'hello';
 		}
+		var self = shouldFail(this);
+		shouldFail(instanceMethod());
+		var closure = shouldFail(instanceMethod);
 		var notInitializedYet = shouldFail(initializedInConstructor);
 		initializedInConstructor = 'hello';
 		//make sure safety is checked in constructors
 		var s:Null<String> = 'hello';
 		shouldFail(s.length);
 	}
+
+	function instanceMethod() {}
 
 	static function fieldAccess_onNullableValue_shouldFail():Void {
 		var a:Null<String> = "hello";
