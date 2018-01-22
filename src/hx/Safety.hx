@@ -87,7 +87,7 @@ class Safety {
 	 */
 	static public inline function sure<T>(value:Null<T>):T {
 		var tmp = value;
-		return tmp == null ? throw new safety.NullPointerException() : tmp;
+		return tmp == null ? throw new safety.NullPointerException('Null pointer') : tmp;
 	}
 
 	/**
