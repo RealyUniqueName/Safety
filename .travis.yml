@@ -15,12 +15,12 @@ install:
   - haxelib run travix install
 
 script:
-  - then haxelib run travix interp
+  - haxelib run travix interp
   - haxelib run travix neko
   - haxelib run travix python
   - haxelib run travix node
   - haxelib run travix java
-  - then haxelib run travix cpp
+  - haxelib run travix cpp
   # Travix executes tests without --debug for c#, which leads to losing line numbers
   # - haxelib run travix cs
   - haxelib run travix php
