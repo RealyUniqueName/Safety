@@ -6,7 +6,6 @@
 -main Test
 -D analyzer-optimize
 # -js bin/test.js
--neko bin/test.n
 
 --macro Validator.register()
 # -D VALIDATOR_DONT_FAIL
