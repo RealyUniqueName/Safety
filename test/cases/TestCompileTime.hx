@@ -343,6 +343,13 @@ private class Test {
 		var s:String = b;
 	}
 
+	static function checkAgainstNull_valueBecomesSafeInIf_shouldStaySafe(?a:String) {
+		if(a == null) {
+			a = 'hello';
+		}
+		var s:String = a;
+	}
+
 	static function return_nullableValueFromNotNullableResult_shouldFail(?a:String):String {
 		function local():String {
 			shouldFail(return a);
@@ -468,6 +475,21 @@ private class Test {
 		var o:AnonAsStruct = {};
 		shouldFail(var s:String = o.optional);
 	}
+
+	static function safetyInference_safeValueAssignedToNullable_shouldBecomeSafe(?a:String, ?b:String) {
+		a = 'hello';
+		var s:String = a;
+	}
+
+	static function safetyInference_safeValueAssignedToNullableInAllBranches_shouldStaySafe(?a:String, ?b:String) {
+		if(Std.random(2) == 1) {
+			a = 'hello';
+		} else {
+			a = 'world';
+		}
+		var s:String = a;
+	}
+
 	/**
 	 *
 	 *  TODO far far future

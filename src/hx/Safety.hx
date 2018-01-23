@@ -17,7 +17,7 @@ typedef SafetyPluginApi = {
 	function getErrors():Array<{msg:String, pos:Position}>;
 	/** Returns a list of all warnings found during safety checks */
 	function getWarnings():Array<{msg:String, pos:Position}>;
-	/** Check if current macro position should be handled by Safety (based on `-D SAFETY=` flag) for preprocessing safe-call operator `!.` */
+	/** Check if current macro position should be handled by Safety (based on `-D SAFETY=` flag) */
 	function isInSafety():Bool;
 }
 #end
@@ -74,7 +74,7 @@ class Safety {
 #else
 
 	/**
-	 *  Returns `value` if it is not `null`. Otherwise returns `defaultValue.
+	 *  Returns `value` if it is not `null`. Otherwise returns `defaultValue`.
 	 */
 	static public inline function or<T>(value:Null<T>, defaultValue:T):T {
 		var tmp = value; //temp var is required if `value` is captured in a closure, because captured vars cannot be safe.

@@ -1,5 +1,7 @@
 package cases;
 
+using Safety;
+
 private typedef Dummy = {
 	nullable:Null<String>
 }
@@ -13,6 +15,6 @@ class TestSafeNavigation extends BaseCase {
 	public function testSafeAccess_onNotNull_returnsActualValue() {
 		var value = 'hello';
 		var o:Dummy = { nullable:value };
-		assert.isTrue(value.length == o!.nullable!.length);
+		assert.isTrue(value.length == o!.nullable!.length.unsafe());
 	}
 }

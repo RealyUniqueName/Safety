@@ -87,7 +87,7 @@ var s:String = nullable.or('hello');
 Available extensions:
 ```haxe
 /**
-*  Returns `value` if it is not `null`. Otherwise returns `defaultValue.
+*  Returns `value` if it is not `null`. Otherwise returns `defaultValue`.
 */
 static public inline function or<T>(value:Null<T>, defaultValue:T):T;
 /**
