@@ -34,7 +34,7 @@ let fail ?msg hxpos mlpos =
 	let msg =
 		(Lexer.get_error_pos (Printf.sprintf "%s:%d:") hxpos) ^ ": "
 		^ "Haxe-safety: " ^ (match msg with Some msg -> msg | _ -> "unexpected expression.") ^ "\n"
-		^ "Submit an issue to https://github.com/RealyUniqueName/Haxe-Safety/issues with expression example and following information:"
+		^ "Submit an issue to https://github.com/RealyUniqueName/Safety/issues with expression example and following information:"
 	in
 	match mlpos with
 		| (file, line, _, _) ->
