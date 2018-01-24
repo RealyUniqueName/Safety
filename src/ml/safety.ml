@@ -66,6 +66,14 @@ let rec is_nullable_type t =
 			false
 
 (**
+	Check if provided type is `Unsafe<T>`
+*)
+let is_special_type_unsafe t =
+	match t with
+		| TType ({ t_path = ([], "Unsafe") }, _) -> true
+		| _ -> false
+
+(**
 	Checks if execution of provided expression is guaranteed to be terminated with `return` or `throw`.
 *)
 let rec is_dead_end e =
@@ -968,7 +976,9 @@ class expr_checker report =
 			Check if `expr` can be passed to a place where `to_type` is expected.
 		*)
 		method private can_pass_expr expr to_type p =
-			if self#is_nullable_expr expr && not (is_nullable_type to_type) then
+			if (is_special_type_unsafe expr.etype) or (is_special_type_unsafe to_type) then
+				true
+			else if self#is_nullable_expr expr && not (is_nullable_type to_type) then
 				false
 			else
 				let expr_type = unfold_null expr.etype in

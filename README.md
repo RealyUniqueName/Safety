@@ -36,7 +36,7 @@ function fn(s:String) {}
 var nullable:Null<String> = 'hello';
 var str:String = null; //Compilation error
 str = nullable; //Compilation error
-fn(nullable); //Compilation error. Function argument was not declared with `Null<String>`
+fn(nullable); //Compilation error. Function argument `str` is not nullable
 ```
 * Using nullables with unary and binary operators (except `==` and `!=`) is not allowed;
 * If a field is declared without `Null<>` then it should have an initial value or it should be initialized in a constructor (for instance fields);
@@ -98,7 +98,7 @@ static public inline function sure<T>(value:Null<T>):T;
 /**
 *  Just returns `value` without any checks, but typed as not-nullable. Use at your own risk.
 */
-static public function unsafe<T>(value:Null<T>):T;
+static public inline function unsafe<T>(value:Null<T>):T;
 /**
 *  Applies `callback` to `value` and returns the result if `value` is not `null`.
 *  Returns `null` otherwise.

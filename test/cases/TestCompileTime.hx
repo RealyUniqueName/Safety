@@ -368,6 +368,28 @@ private class Test {
 		for(i in shouldFail(a)) {}
 	}
 
+	// TODO
+	// static function for_safeOuterVar_shouldBeSafeInLoop(?a:String) {
+	// 	if(a != null) {
+	// 		for(i in 0...10) {
+	// 			var s:String = a;
+	// 		}
+	// 	}
+	// }
+
+	// TODO
+	// static function for_safeOuterVarBecomesUnsafeInLoop_shouldBeUnsafeFromLoopStart(?a:String) {
+	// 	if(a != null) {
+	// 		for(i in 0...10) {
+	// 			shouldFail(var s:String = a);
+	// 			a = null;
+	// 			if(a != null) {
+	// 				var s:String = null;
+	// 			}
+	// 		}
+	// 	}
+	// }
+
 	static function while_nullableCondition_shouldFail(?a:Bool) {
 		shouldFail(while(a) {});
 	}

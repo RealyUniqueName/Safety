@@ -77,8 +77,7 @@ class Safety {
 	 *  Returns `value` if it is not `null`. Otherwise returns `defaultValue`.
 	 */
 	static public inline function or<T>(value:Null<T>, defaultValue:T):T {
-		var tmp = value; //temp var is required if `value` is captured in a closure, because captured vars cannot be safe.
-		return tmp == null ? defaultValue : tmp;
+		return value == null ? defaultValue : (value:Unsafe<T>);
 	}
 
 	/**
@@ -86,15 +85,14 @@ class Safety {
 	 *  @throws NullPointerException if `value` is `null`.
 	 */
 	static public inline function sure<T>(value:Null<T>):T {
-		var tmp = value;
-		return tmp == null ? throw new safety.NullPointerException('Null pointer') : tmp;
+		return value == null ? throw new safety.NullPointerException('Null pointer') : (value:Unsafe<T>);
 	}
 
 	/**
 	 *  Just returns `value` without any checks, but typed as not-nullable. Use at your own risk.
 	 */
-	static public function unsafe<T>(value:Null<T>):T {
-		return value;
+	static public inline function unsafe<T>(value:Null<T>):T {
+		return (value:Unsafe<T>);
 	}
 
 	/**
@@ -102,16 +100,14 @@ class Safety {
 	 *  Returns `null` otherwise.
 	 */
 	static public inline function let<T,V>(value:Null<T>, callback:T->V):Null<V> {
-		var tmp = value;
-		return tmp == null ? null : callback(tmp);
+		return value == null ? null : callback((value:Unsafe<T>));
 	}
 
 	/**
 	 *  Passes `value` to `callback` if `value` is not null.
 	 */
 	static public inline function run<T>(value:Null<T>, callback:T->Void) {
-		var tmp = value;
-		if(tmp != null) callback(tmp);
+		if(value != null) callback((value:Unsafe<T>));
 	}
 
 	/**
@@ -119,8 +115,7 @@ class Safety {
 	 *  Returns `value`.
 	 */
 	static public inline function apply<T>(value:Null<T>, callback:T->Void):Null<T> {
-		var tmp = value;
-		if(tmp != null) callback(tmp);
+		if(value != null) callback((value:Unsafe<T>));
 		return value;
 	}
 #end
