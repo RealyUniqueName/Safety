@@ -49,7 +49,7 @@ class Safety {
 	}
 
 	static public function register() {
-		#if !(SAFETY_DISABLE_SAFE_NAVIGATION || SAFETY_DISABLE_SAFE_ARRAY)
+		#if (!SAFETY_DISABLE_SAFE_NAVIGATION || !SAFETY_DISABLE_SAFE_ARRAY)
 		Compiler.addGlobalMetadata('', '@:build(safety.macro.SafeAst.build())');
 		#end
 		if(haxe.macro.Context.defined('display')) {

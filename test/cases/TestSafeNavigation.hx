@@ -9,6 +9,7 @@ private typedef Dummy = {
 }
 
 class TestSafeNavigation extends BaseCase {
+#if !SAFETY_DISABLE_SAFE_NAVIGATION
 	public function testSafeAccess_onNullValue_returnsNull() {
 		var o:Null<Dummy> = null;
 		Assert.isTrue(null == o!.nullable!.length);
@@ -19,4 +20,5 @@ class TestSafeNavigation extends BaseCase {
 		var o:Dummy = { nullable:value };
 		Assert.isTrue(value.length == o!.nullable!.length.unsafe());
 	}
+#end
 }

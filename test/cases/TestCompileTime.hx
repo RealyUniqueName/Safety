@@ -43,10 +43,12 @@ private class Test {
 	var initializedInAllBranchesOfConstructor:String;
 	@:shouldFail var initializedInSomeBranchesOfConstructor:String;
 
+#if !SAFETY_DISABLE_SAFE_NAVIGATION
 	static public function safeCallOperator_shouldPass() {
 		var obj:Null<{field:Null<String>}> = null;
 		var l = obj!.field!.length;
 	}
+#end
 
 	/**
 	 *  Null safety should work in __init__ functions
