@@ -43,13 +43,6 @@ private class Test {
 	var initializedInAllBranchesOfConstructor:String;
 	@:shouldFail var initializedInSomeBranchesOfConstructor:String;
 
-#if !SAFETY_DISABLE_SAFE_NAVIGATION
-	static public function safeCallOperator_shouldPass() {
-		var obj:Null<{field:Null<String>}> = null;
-		var l = obj!.field!.length;
-	}
-#end
-
 	/**
 	 *  Null safety should work in __init__ functions
 	 */
@@ -308,6 +301,13 @@ private class Test {
 			shouldFail(var s:String = a);
 		}
 	}
+
+	// static function checkedAgainstNull_modifiedInClosureInLoop_shouldFail(?a:String) {
+	// 	for(i in 0...10) {
+	// 		trace(_ -> a = null);
+	// 	}
+	// 	shouldFail(var s:String = a);
+	// }
 
 	static function checkAgainstNull_complexConditions() {
 		var nullable:Null<String> = 'hello';

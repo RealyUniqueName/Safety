@@ -74,12 +74,14 @@ let is_special_type_unsafe t =
 		| _ -> false
 
 (**
-	Checks if execution of provided expression is guaranteed to be terminated with `return` or `throw`.
+	Checks if execution of provided expression is guaranteed to be terminated with `return`, `throw`, `break` or `continue`.
 *)
 let rec is_dead_end e =
 	match e.eexpr with
 		| TThrow _ -> true
 		| TReturn _ -> true
+		| TBreak -> true
+		| TContinue -> true
 		| TWhile (_, body, DoWhile) -> is_dead_end body
 		| TIf (_, if_body, Some else_body) -> is_dead_end if_body && is_dead_end else_body
 		| TBlock exprs -> List.exists is_dead_end exprs
@@ -721,13 +723,16 @@ let should_be_initialized field =
 (**
 	Each loop or function should have its own scope.
 *)
-class safety_scope (scope_type:scope_type) =
+class safety_scope (scope_type:scope_type) (safe_locals:(int,tvar) Hashtbl.t) (never_safe:(int,tvar) Hashtbl.t) =
 	object (self)
-		val safe_locals = Hashtbl.create 100
-		val never_safe = Hashtbl.create 100
+		(* val safe_locals = Hashtbl.create 100
+		val never_safe = Hashtbl.create 100 *)
 		(** Local vars declared in current scope *)
 		val declarations = Hashtbl.create 100
 		method get_safe_locals = safe_locals
+		method get_never_safe = never_safe
+		(* method get_never_safe = safe_locals
+		method copy_safety *)
 		(* method get_never_safe = never_safe *)
 		method get_type = scope_type
 		(**
@@ -768,12 +773,12 @@ class safety_scope (scope_type:scope_type) =
 *)
 class local_vars =
 	object (self)
-		val mutable scopes = [new safety_scope STNormal]
+		val mutable scopes = [new safety_scope STNormal (Hashtbl.create 100) (Hashtbl.create 100)]
 		(**
 			Drop collected data
 		*)
 		method clear =
-			scopes <- [new safety_scope STNormal]
+			scopes <- [new safety_scope STNormal (Hashtbl.create 100) (Hashtbl.create 100)]
 		(**
 			Get the latest created scope.
 		*)
@@ -785,14 +790,15 @@ class local_vars =
 			Should be called upon local function declaration.
 		*)
 		method function_declared (fn:tfunc) =
-			let scope = new safety_scope STClosure in
+			let scope = new safety_scope STClosure (Hashtbl.create 100) (Hashtbl.create 100) in
 			scopes <- scope :: scopes;
 			List.iter (fun (v, _) -> scope#declare_var v) fn.tf_args
 		(**
 			Should be called upon entering a loop.
 		*)
 		method loop_declared e =
-			let scope = new safety_scope STLoop in
+			(* let scope = new safety_scope STLoop self#get_current_scope#get_safe_locals self#get_current_scope#get_never_safe in *)
+			let scope = new safety_scope STLoop (Hashtbl.create 100) (Hashtbl.create 100) in
 			scopes <- scope :: scopes;
 			match e.eexpr with
 				| TFor (v, _, _) -> scope#declare_var v
@@ -934,19 +940,21 @@ class expr_checker report =
 		val local_safety = new local_vars
 		val mutable return_types = []
 		val mutable in_closure = false
+		(* if this flag is `true` then spotted errors and warnings will not be reported *)
+		val mutable is_pretending = false
 		(* val mutable cnt = 0 *)
 		(**
 			Register an error
 		*)
 		method error msg p =
-			report.sr_errors <- { sm_msg = ("Safety: " ^ msg); sm_pos = p; } :: report.sr_errors;
-			(* cnt <- cnt + 1;
-			if cnt = 2 then assert false *)
+			if not is_pretending then
+				report.sr_errors <- { sm_msg = ("Safety: " ^ msg); sm_pos = p; } :: report.sr_errors;
 		(**
 			Register an warning
 		*)
 		method warning msg p =
-			report.sr_warnings <- { sm_msg = ("Safety: " ^ msg); sm_pos = p; } :: report.sr_warnings;
+			if not is_pretending then
+				report.sr_warnings <- { sm_msg = ("Safety: " ^ msg); sm_pos = p; } :: report.sr_warnings;
 		(**
 			Check if `e` is nullable even if the type is reported not-nullable.
 			Haxe type system lies sometimes.
@@ -1078,7 +1086,7 @@ class expr_checker report =
 						self#check_expr condition
 					in
 					local_safety#loop_declared e;
-					local_safety#process_while e self#is_nullable_expr check_condition self#check_expr;
+					local_safety#process_while e self#is_nullable_expr check_condition self#check_loop_body;
 					local_safety#scope_closed
 				| _ -> fail ~msg:"Expected TWhile." e.epos __POS__
 		(**
@@ -1092,9 +1100,19 @@ class expr_checker report =
 					self#check_expr iterable;
 					local_safety#declare_var v;
 					local_safety#loop_declared e;
-					self#check_expr body;
+					self#check_loop_body body;
 					local_safety#scope_closed
 				| _ -> fail ~msg:"Expected TFor." e.epos __POS__
+		(**
+			Handle safety inside of loops
+		*)
+		method private check_loop_body body =
+			(* Start pretending to ignore errors *)
+			(* is_pretending <- true;
+			self#check_expr body; *)
+			(* Now we know, which vars will become unsafe in this loop. Stop pretending and check again *)
+			is_pretending <- false;
+			self#check_expr body;
 		(**
 			Don't throw nullable values
 		*)
