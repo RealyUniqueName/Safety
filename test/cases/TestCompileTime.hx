@@ -319,14 +319,14 @@ private class Test {
 		}
 	}
 
-	// static function checkedAgainstNull_modifiedInClosureInLoop_shouldBecomeNeverSafe(?a:String) {
-	// 	for(i in 0...10) {
-	// 		trace(_ -> a = null);
-	// 	}
-	// 	if(a != null) {
-	// 		shouldFail(var s:String = a);
-	// 	}
-	// }
+	static function checkedAgainstNull_modifiedInClosureInLoop_shouldBecomeNeverSafe(?a:String) {
+		for(i in 0...10) {
+			trace(_ -> a = null);
+		}
+		if(a != null) {
+			shouldFail(var s:String = a);
+		}
+	}
 
 	static function checkedAgainstNull_modifiedInNestedClosure_shouldBecomeNeverSafe(?a:String) {
 		trace(() -> () -> a = null);

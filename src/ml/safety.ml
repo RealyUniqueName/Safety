@@ -941,7 +941,7 @@ class local_vars =
 										if current#owns_var v then
 											current#remove_from_safety ~forever:!captured v
 										else begin
-											captured := current#get_type = STClosure;
+											captured := !captured || current#get_type = STClosure;
 											current#remove_from_safety ~forever:!captured v;
 											traverse rest
 										end
