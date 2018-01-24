@@ -265,13 +265,30 @@ private class Test {
 		}
 	}
 
-	static function checkAgainstNull_checkOutsideLoopHasNoEffectInLoop(?a:String) {
+	static function checkAgainstNull_checkOutsideLoop_shouldStaySafeInLoop(?a:String) {
+		if(a != null) {
+			for(i in 0...10) {
+				var s:String = a;
+			}
+		}
+	}
+
+	static function checkAgainstNull_checkInLoop(?a:String) {
+		var s:String;
+		for(i in 0...10) {
+			shouldFail(s = a);
+			if(a != null) {
+				s = a;
+			}
+			shouldFail(s = a);
+		}
+	}
+
+	static function checkAgainstNull_checkOutsideLoopAndChangedToNullableInside_shouldBeUnsafeFromBeginningOfLoop(?a:String) {
 		if(a != null) {
 			for(i in 0...10) {
 				shouldFail(var s:String = a);
-				if(a != null) {
-					var s:String = a;
-				}
+				a = null;
 			}
 		}
 	}
@@ -302,12 +319,21 @@ private class Test {
 		}
 	}
 
-	// static function checkedAgainstNull_modifiedInClosureInLoop_shouldFail(?a:String) {
+	// static function checkedAgainstNull_modifiedInClosureInLoop_shouldBecomeNeverSafe(?a:String) {
 	// 	for(i in 0...10) {
 	// 		trace(_ -> a = null);
 	// 	}
-	// 	shouldFail(var s:String = a);
+	// 	if(a != null) {
+	// 		shouldFail(var s:String = a);
+	// 	}
 	// }
+
+	static function checkedAgainstNull_modifiedInNestedClosure_shouldBecomeNeverSafe(?a:String) {
+		trace(() -> () -> a = null);
+		if(a != null) {
+			shouldFail(var s:String = a);
+		}
+	}
 
 	static function checkAgainstNull_complexConditions() {
 		var nullable:Null<String> = 'hello';
@@ -343,6 +369,19 @@ private class Test {
 		}
 		//function execution will continue only if `b` is not null
 		var s:String = b;
+	}
+
+	static function checkAgainstNull_deadEndOfLoop_shouldPassAfterCheckedBlock(?a:String, ?b:String) {
+		var s:String;
+		while(Std.random(2) == 1) {
+			shouldFail(s = a);
+			if(a == null) continue;
+			s = a;
+
+			shouldFail(s = b);
+			if(b == null) break;
+			s = b;
+		}
 	}
 
 	static function checkAgainstNull_valueBecomesSafeInIf_shouldStaySafe(?a:String) {

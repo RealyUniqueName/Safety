@@ -787,6 +787,11 @@ class local_vars =
 				| current :: _-> current
 				| [] -> fail ~msg:"List of scopes should never end." null_pos __POS__
 		(**
+			Get a copy of hashtable, which stores currently safe locals
+		*)
+		method get_safe_locals_copy =
+			Hashtbl.copy (self#get_current_scope#get_safe_locals)
+		(**
 			Should be called upon local function declaration.
 		*)
 		method function_declared (fn:tfunc) =
@@ -797,8 +802,8 @@ class local_vars =
 			Should be called upon entering a loop.
 		*)
 		method loop_declared e =
-			(* let scope = new safety_scope STLoop self#get_current_scope#get_safe_locals self#get_current_scope#get_never_safe in *)
-			let scope = new safety_scope STLoop (Hashtbl.create 100) (Hashtbl.create 100) in
+			let scope = new safety_scope STLoop self#get_current_scope#get_safe_locals self#get_current_scope#get_never_safe in
+			(* let scope = new safety_scope STLoop (Hashtbl.create 100) (Hashtbl.create 100) in *)
 			scopes <- scope :: scopes;
 			match e.eexpr with
 				| TFor (v, _, _) -> scope#declare_var v
@@ -856,6 +861,22 @@ class local_vars =
 					body_callback body;
 					List.iter self#get_current_scope#remove_from_safety not_nulls;
 				| _ -> fail ~msg:"Expected TWhile" expr.epos __POS__
+		(**
+			Should be called for bodies of loops (for, while)
+		*)
+		method process_loop_body (first_check:unit->unit) (second_check:unit->unit) =
+			let original_safe_locals = Hashtbl.copy self#get_current_scope#get_safe_locals in
+			(** The first check to find out which vars will become unsafe in a loop *)
+			first_check();
+			(* If local var became safe in a loop, then we need to remove it from safety to make it unsafe outside of a loop again *)
+			Hashtbl.iter
+				(fun var_id v ->
+					if not (Hashtbl.mem original_safe_locals var_id) then
+						self#get_current_scope#remove_from_safety v
+				)
+				(Hashtbl.copy self#get_current_scope#get_safe_locals);
+			(** The second check with unsafe vars removed from safety *)
+			second_check()
 		(**
 			This method should be called upon passing `if`.
 			It collects locals which are checked against `null` and executes callbacks for expressions with proper statuses of locals.
@@ -1107,12 +1128,17 @@ class expr_checker report =
 			Handle safety inside of loops
 		*)
 		method private check_loop_body body =
-			(* Start pretending to ignore errors *)
-			(* is_pretending <- true;
-			self#check_expr body; *)
-			(* Now we know, which vars will become unsafe in this loop. Stop pretending and check again *)
-			is_pretending <- false;
-			self#check_expr body;
+			local_safety#process_loop_body
+				(* Start pretending to ignore errors *)
+				(fun () ->
+					is_pretending <- true;
+					self#check_expr body
+				)
+				(* Now we know, which vars will become unsafe in this loop. Stop pretending and check again *)
+				(fun () ->
+					is_pretending <- false;
+					self#check_expr body;
+				)
 		(**
 			Don't throw nullable values
 		*)
