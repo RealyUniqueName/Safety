@@ -1,66 +1,68 @@
 package cases;
 
+import utest.Assert;
+
 using Safety;
 
 class TestSafetyExtensions extends BaseCase {
 	public function testOr() {
 		var s:Null<String> = null;
-		assert.equals('hello', s.or('hello'));
+		Assert.equals('hello', s.or('hello'));
 		s = 'world';
-		assert.equals('world', s.or('hello'));
+		Assert.equals('world', s.or('hello'));
 	}
 
 	public function testSure() {
 		var s:Null<String> = null;
-		assert.raises(() -> s.sure(), safety.NullPointerException);
+		Assert.raises(() -> s.sure(), safety.NullPointerException);
 		s = 'hello';
-		assert.equals('hello', s.sure());
+		Assert.equals('hello', s.sure());
 	}
 
 	public function testUnsafe() {
 		var nullable:Null<String> = null;
 		var s:String = nullable.unsafe();
-		assert.isTrue(null == s);
+		Assert.isTrue(null == s);
 	}
 
 	public function testLet() {
 		var s:Null<String> = null;
 		var result = s.let(_ -> {
-			assert.fail();
+			Assert.fail();
 			'wrong';
 		});
-		assert.isTrue(null == result);
+		Assert.isTrue(null == result);
 
 		s = 'hello';
 		result = s.let(h -> '$h, world');
-		assert.isTrue('hello, world' == result);
+		Assert.isTrue('hello, world' == result);
 	}
 
 	public function testRun() {
 		var s:Null<String> = null;
-		s.run(_ -> assert.fail());
+		s.run(_ -> Assert.fail());
 
 		s = 'hello';
 		var invoked = false;
 		s.run(h -> {
 			invoked = true;
-			assert.equals('hello', h);
+			Assert.equals('hello', h);
 		});
-		assert.isTrue(invoked);
+		Assert.isTrue(invoked);
 	}
 
 	public function testApply() {
 		var s:Null<String> = null;
-		var result = s.apply(_ -> assert.fail());
-		assert.isTrue(result == s);
+		var result = s.apply(_ -> Assert.fail());
+		Assert.isTrue(result == s);
 
 		s = 'hello';
 		var invoked = false;
 		result = s.apply(h -> {
 			invoked = true;
-			assert.isTrue(s == h);
+			Assert.isTrue(s == h);
 		});
-		assert.isTrue(s == result);
-		assert.isTrue(invoked);
+		Assert.isTrue(s == result);
+		Assert.isTrue(invoked);
 	}
 }
