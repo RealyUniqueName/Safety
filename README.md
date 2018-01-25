@@ -1,4 +1,4 @@
-# Safety
+# Safety [![Build Status](https://travis-ci.org/RealyUniqueName/Safety.svg?branch=master)](https://travis-ci.org/RealyUniqueName/Safety)
 
 This is a null safety implementation as a plugin for Haxe compiler. It's an attempt to push Haxe towards null safety implementation in the compiler.
 Use this plugin, report bugs and share your thoughts in [issues](https://github.com/RealyUniqueName/Safety/issues).
