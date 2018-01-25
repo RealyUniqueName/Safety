@@ -293,17 +293,6 @@ private class Test {
 		}
 	}
 
-	// TODO
-	// static function checkAgainstNull_nullifiedInLoop_shouldBecomeSafeAfterCheck(?a:String) {
-	// 	for(i in 0...10) {
-	// 		shouldFail(var s:String = a);
-	// 		a = null;
-	// 		if(a != null) {
-	// 			var s:String = null;
-	// 		}
-	// 	}
-	// }
-
 	static function checkedAgainstNull_checkedInClosure_shouldFail(?a:String) {
 		function local() {
 			if(a != null) {
