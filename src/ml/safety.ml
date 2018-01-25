@@ -1160,6 +1160,7 @@ class expr_checker report =
 			local_safety#function_declared fn;
 			return_types <- fn.tf_type :: return_types;
 			self#check_expr fn.tf_expr;
+			return_types <- List.tl return_types;
 			local_safety#scope_closed
 		(**
 			Don't return nullable values as not-nullable return types.

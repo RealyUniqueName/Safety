@@ -293,6 +293,17 @@ private class Test {
 		}
 	}
 
+	// TODO
+	// static function checkAgainstNull_nullifiedInLoop_shouldBecomeSafeAfterCheck(?a:String) {
+	// 	for(i in 0...10) {
+	// 		shouldFail(var s:String = a);
+	// 		a = null;
+	// 		if(a != null) {
+	// 			var s:String = null;
+	// 		}
+	// 	}
+	// }
+
 	static function checkedAgainstNull_checkedInClosure_shouldFail(?a:String) {
 		function local() {
 			if(a != null) {
@@ -408,28 +419,6 @@ private class Test {
 	static function for_iterateOverNullableValue_shouldFail(?a:Iterable<Int>) {
 		for(i in shouldFail(a)) {}
 	}
-
-	// TODO
-	// static function for_safeOuterVar_shouldBeSafeInLoop(?a:String) {
-	// 	if(a != null) {
-	// 		for(i in 0...10) {
-	// 			var s:String = a;
-	// 		}
-	// 	}
-	// }
-
-	// TODO
-	// static function for_safeOuterVarBecomesUnsafeInLoop_shouldBeUnsafeFromLoopStart(?a:String) {
-	// 	if(a != null) {
-	// 		for(i in 0...10) {
-	// 			shouldFail(var s:String = a);
-	// 			a = null;
-	// 			if(a != null) {
-	// 				var s:String = null;
-	// 			}
-	// 		}
-	// 	}
-	// }
 
 	static function while_nullableCondition_shouldFail(?a:Bool) {
 		shouldFail(while(a) {});
@@ -551,6 +540,11 @@ private class Test {
 			a = 'world';
 		}
 		var s:String = a;
+	}
+
+	static function closure_returnsSomethingAndMethodReturnsNullable_shouldPass():Null<String> {
+		function local() return 10;
+		return null;
 	}
 
 	/**
