@@ -8,21 +8,28 @@ os:
   - osx
 
 haxe:
-  - development_ceeba64
+  - development
 
 install:
+  - rm -rf ${HOME}/haxe
+  - wget http://hxbuilds.s3-website-us-east-1.amazonaws.com/builds/haxe/linux64/haxe_2018-01-23_development_ceeba64.tar.gz
+  - tar -xf haxe_2018-01-23_development_ceeba64.tar.gz
+  - mv haxe_20180123223651_ceeba64 ${HOME}/haxe
+  - echo $(haxe -version)
+  - haxelib setup ${HOME}/haxe/lib
+  - haxelib install exception
+  - haxelib install utest
   - haxelib install travix
-  - haxelib run travix install
 
 script:
+  - haxelib tests.hxml
   - haxelib run travix interp
   - haxelib run travix neko
   - haxelib run travix python
   - haxelib run travix node
   - haxelib run travix java
   - haxelib run travix cpp
-  # Travix executes tests without --debug for c#, which leads to losing line numbers
-  # - haxelib run travix cs
+  - haxelib run travix cs
   - haxelib run travix php
   #Invalid lua setup on OSX. See https://github.com/back2dos/travix/issues/78
   - if [ `uname` = "Linux" ]; then haxelib run travix lua; fi
