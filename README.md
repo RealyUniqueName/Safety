@@ -6,12 +6,13 @@ Hopefully we can find the best approach to null safety together. And then with a
 
 ## Installation
 
-Minimum supported Haxe version is `4.0.0-preview.2`
+Minimum supported Haxe version is `4.0.0-preview.2`, but pre-built binaries are only compatible with commit ceeba64 of development branch of Haxe.
+
+Compatible compiler nightlies for x64 systems: [Windows](http://hxbuilds.s3-website-us-east-1.amazonaws.com/builds/haxe/windows64-installer/haxe_2018-01-23_development_ceeba64.zip), [Mac](http://hxbuilds.s3-website-us-east-1.amazonaws.com/builds/haxe/mac-installer/haxe_2018-01-25_development_ceeba64.tar.gz), [Linux](http://hxbuilds.s3-website-us-east-1.amazonaws.com/builds/haxe/linux64/haxe_2018-01-23_development_ceeba64.tar.gz).
 ```
 haxelib git safety https://github.com/RealyUniqueName/Safety.git
 ```
-Pre-built binaries compatible with Haxe 4.0.0-preview.2 for x64 systems (Linux, Windows, Mac) are included.
-If you want to use this plugin with another OS, arch or a newer version of Haxe you need to setup desired version of Haxe for development (see [Building Haxe from source](https://haxe.org/documentation/introduction/building-haxe.html)) and then
+If you want to use this plugin with another OS, arch or a another version of Haxe you need to setup desired version of Haxe for development (see [Building Haxe from source](https://haxe.org/documentation/introduction/building-haxe.html)) and then
 ```
 cd path/to/haxe-source/
 make PLUGIN=path/to/safety/src/ml/safety plugin
@@ -170,6 +171,8 @@ var str:String;
 if(nullable != null) {
 	str = nullable; //OK
 	doStuff(function() nullable = getSomeNullableStr());
-	str = nullable; //Compilation error
+	if(nullable != null) {
+		str = nullable; //Compilation error
+	}
 }
 ```
