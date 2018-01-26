@@ -46,7 +46,7 @@ fn(nullable); //Compilation error. Function argument `str` is not nullable
 * Passing an instance of parameterized type with nullable type parameter to a place with the same type, but with not-nullable type parameter is not allowed:
 ```haxe
 var nullables:Array<Null<String>> = ['hello', null, 'world'];
-var a:Array<Int> = nullables; //Compilation error. Array<Null<String>> cannot be assigned to Array<String>
+var a:Array<String> = nullables; //Compilation error. Array<Null<String>> cannot be assigned to Array<String>
 ```
 * Local variables checked against `null` are considered _safe_ inside of a scope covered with that null-check:
 ```haxe
