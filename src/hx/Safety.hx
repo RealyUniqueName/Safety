@@ -67,7 +67,7 @@ class Safety {
 		var path = Path.join([srcDir, 'ml', 'safety.cmxs']); //development path
 		//if development binary does not exist, use pre built one
 		if(!path.exists()) {
-			path = Path.join([srcDir, 'ml', 'bin', Sys.systemName(), 'safety.cmxs']);
+			path = Path.join([srcDir, 'bin', Sys.systemName(), 'safety.cmxs']);
 		}
 		return path;
 	}
