@@ -11,10 +11,12 @@ haxe:
   - development
 
 install:
-  - rm -rf ${HOME}/haxe
-  - wget http://hxbuilds.s3-website-us-east-1.amazonaws.com/builds/haxe/linux64/haxe_2018-01-23_development_ceeba64.tar.gz
-  - tar -xf haxe_2018-01-23_development_ceeba64.tar.gz
-  - mv haxe_20180123223651_ceeba64 ${HOME}/haxe
+  - rm -rf ${HOME}/haxe/*
+  - if [ `uname` = "Linux" ]; then
+      curl -s -L --retry 3 'http://hxbuilds.s3-website-us-east-1.amazonaws.com/builds/haxe/linux64/haxe_2018-01-23_development_ceeba64.tar.gz' | tar -C ${HOME}/haxe -x -z --strip-components=1 -f -;
+    else
+      curl -s -L --retry 3 'http://hxbuilds.s3-website-us-east-1.amazonaws.com/builds/haxe/mac/haxe_2018-01-25_development_ceeba64.tar.gz' | tar -C ${HOME}/haxe -x -z --strip-components=1 -f -;
+    fi;
   - echo $(haxe -version)
   - haxelib setup ${HOME}/haxe/lib
   - haxelib install exception
