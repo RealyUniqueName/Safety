@@ -9,6 +9,6 @@
 	"classPath"    : "src/hx",
 	"contributors" : ["RealyUniqueName"],
 	"dependencies" : {
-		"exception": "1.0.1"
+		"exception": "1.0.2"
 	}
 }
