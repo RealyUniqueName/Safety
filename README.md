@@ -53,23 +53,23 @@ var a:Array<Int> = nullables; //Compilation error. Array<Null<String>> cannot be
 var nullable:Null<String> = getSomeStr();
 var s:String = nullable; //Compilation error
 if(nullable != null) {
-	s = nullable; //OK
+    s = nullable; //OK
 }
 s = nullable; //Compilation error
 s = (nullable == null ? 'hello' : nullable); //OK
 switch(nullable) {
-	case null:
-	case _: s = nullable; //OK
+    case null:
+    case _: s = nullable; //OK
 }
 ```
 * Control flow is also taken into account:
 ```haxe
 function doStuff(a:Null<String>) {
-	if(a == null) {
-		return;
-	}
-	//From here `a` is safe, because function execution will continue only if `a` is not null
-	var s:String = a; //OK
+    if(a == null) {
+        return;
+    }
+    //From here `a` is safe, because function execution will continue only if `a` is not null
+    var s:String = a; //OK
 }
 ```
 * Safe navigation operator
@@ -79,7 +79,7 @@ trace(obj!.field!.length); //null
 obj = { field:'hello' };
 trace(obj!.field!.length); //5
 ```
-* `SafeArray<T>` (abstract over `Array<T>`) which behaves exactly like `Array<T>` except it prevents out-of-bounds reading/writing (throws `safety.OutOfBoundsException`). See [Limitations](#Limitations) to find out why you need it.
+* `SafeArray<T>` (abstract over `Array<T>`) which behaves exactly like `Array<T>` except it prevents out-of-bounds reading/writing (throws `safety.OutOfBoundsException`). See [Limitations](#limitations) to find out why you need it.
 * Static extensions for convenience:
 ```haxe
 using Safety;
@@ -127,7 +127,7 @@ macro static public function isSafe(expr:Expr):ExprOf<Void>
 * Safe navigation operator `!.` does not provide code completion.
 * Haxe was not designed with null safety in mind, so it's always possible `null` will come to your code from 3rd-party code or even from std lib.
 Safety doesn't perform automatic runtime checks for any values which you get from any code.
-* Out-of-bounds array read returns `null`, but Haxe types it without `Null<>`.
+* Out-of-bounds array read returns `null`, but Haxe types it without `Null<>`. ([PR to the compiler to fix this issue](https://github.com/HaxeFoundation/haxe/pull/6825))
 ```haxe
 var a:Array<String> = ["hello"];
 $type(a[100]); // String
@@ -147,23 +147,24 @@ trace(s); //null
 using Safety;
 
 class Main {
-	var nullable:Null<String>;
-	function new() {
-		var str:String;
-		if(nullable != null) {
-			str = nullable; //Compilation error.
-		}
-		str = nullable.or('hello');
-	}
+    var nullable:Null<String>;
+    function new() {
+        var str:String;
+        if(nullable != null) {
+            str = nullable; //Compilation error.
+        }
+        str = nullable.sure();
+        str = nullable.or('hello');
+    }
 }
 ```
 * If a local var is captured in a closure, it cannot be safe inside that closure:
 ```haxe
 var a:Null<String> = getSomeStr();
 var fn = function() {
-	if(a != null) {
-		var s:String = a; //Compilation error
-	}
+    if(a != null) {
+        var s:String = a; //Compilation error
+    }
 }
 ```
 * If a local var is captured and modified in a closure with a nullable value, that var cannot be safe anymore:
@@ -171,10 +172,10 @@ var fn = function() {
 var nullable:Null<String> = getSomeNullableStr();
 var str:String;
 if(nullable != null) {
-	str = nullable; //OK
-	doStuff(function() nullable = getSomeNullableStr());
-	if(nullable != null) {
-		str = nullable; //Compilation error
-	}
+    str = nullable; //OK
+    doStuff(function() nullable = getSomeNullableStr());
+    if(nullable != null) {
+        str = nullable; //Compilation error
+    }
 }
 ```
