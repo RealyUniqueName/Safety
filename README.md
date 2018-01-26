@@ -9,6 +9,8 @@ Hopefully we can find the best approach to null safety together. And then with a
 Minimum supported Haxe version is `4.0.0-preview.2`, but pre-built binaries are only compatible with commit ceeba64 (and a few later) of development branch of Haxe.
 
 Compatible compiler nightlies for x64 systems: [Windows](http://hxbuilds.s3-website-us-east-1.amazonaws.com/builds/haxe/windows64-installer/haxe_2018-01-23_development_ceeba64.zip), [Mac](http://hxbuilds.s3-website-us-east-1.amazonaws.com/builds/haxe/mac-installer/haxe_2018-01-25_development_ceeba64.tar.gz), [Linux](http://hxbuilds.s3-website-us-east-1.amazonaws.com/builds/haxe/linux64/haxe_2018-01-23_development_ceeba64.tar.gz).
+
+Install Safety:
 ```
 haxelib git safety https://github.com/RealyUniqueName/Safety.git
 ```
