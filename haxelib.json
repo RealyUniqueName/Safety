@@ -1,5 +1,5 @@
 {
-	"name"         : "exception",
+	"name"         : "safety",
 	"url"          : "https://github.com/RealyUniqueName/Haxe-Safety",
 	"license"      : "MIT",
 	"tags"         : ["null", "safety", "npe"],
