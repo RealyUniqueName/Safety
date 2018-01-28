@@ -6,19 +6,32 @@ import haxe.macro.Expr;
 using haxe.macro.ExprTools;
 
 class SafeAst {
+	static var safeApiList:Array<String> = [];
+
+	static public function addSafeAst(path:String) {
+		safeApiList.push(path);
+	}
+
 	static var transformed:Bool = false;
 
-	macro static public function build():Null<Array<Field>> {
+	macro static public function buildSafeNavigationAndArray():Null<Array<Field>> {
 		if(!Safety.plugin.isInSafety()) {
 			return null;
 		}
 
+		transformed = false;
+
 		var fields = [];
+		var typeName = Context.getLocalClass().toString();
 		for(field in Context.getBuildFields()) {
 			var expr = switch(field.kind) {
 				case FVar(_, e): e;
 				case FProp(_, _, _, e): e;
-				case FFun(_.expr => e): e;
+				case FFun(fn):
+					if(field.access.indexOf(APublic) >= 0) {
+						injectArgumentsChecking(fn, field.pos, typeName, field.name);
+					}
+					fn.expr;
 			}
 			if(expr != null) {
 				expr.expr = transform(expr).expr;
@@ -26,11 +39,35 @@ class SafeAst {
 			fields.push(field);
 		}
 
-		if(transformed) {
-			transformed = false;
-			return fields;
-		} else {
-			return null;
+		return transformed ? fields : null;
+	}
+
+	static function injectArgumentsChecking(fn:Function, pos:Position, typeName:String, fieldName:String) {
+		if(fn.args.length == 0) {
+			return;
+		}
+
+		var checks = [];
+		for(arg in fn.args) {
+			if(arg.opt) continue;
+			var argType = arg.type;
+			checks.push(macro @:pos(pos) new safety.macro.NullCheck<$argType>($i{arg.name}, $v{typeName}, $v{fieldName}, $v{arg.name}));
+		}
+		if(checks.length == 0) {
+			return;
+		}
+
+		switch(fn.expr) {
+			case null:
+			case macro $b{exprs}:
+				transformed = true;
+				fn.expr = macro @:pos(fn.expr.pos) $b{checks.concat(exprs)};
+			case expr:
+				transformed = true;
+				fn.expr = macro @:pos(fn.expr.pos) {
+					$b{checks};
+					$expr;
+				}
 		}
 	}
 

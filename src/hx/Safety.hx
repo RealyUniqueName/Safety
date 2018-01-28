@@ -32,6 +32,19 @@ class Safety {
 	static function _isSafe(ident:Dynamic):Void {}; //Handled in plugin
 
 #if macro
+	/**
+	 *  Add this call to hxml to make public method in specifie `path` to throw `NullPointerException` if someone passes `null` there.
+	 *  E.g.:
+	 *  ```
+	 *  --macro Safety.safeApi('my.pack', true)
+	 *  ```
+	 *  @param path - Dot-path of a package or a fully qualified type name.
+	 *  @param recursive - Should we also apply to all sub-packages of `path`?
+	 */
+	static public function safeApi(path:String, recursive:Bool = false) {
+		Compiler.addGlobalMetaData(path, '@:build(safety.macro.SafeAst.buildSafeApi()', recursive);
+	}
+
 	static public var plugin(get,never):SafetyPluginApi;
 	static var _plugin:SafetyPluginApi;
 	static function get_plugin():SafetyPluginApi {
@@ -50,7 +63,7 @@ class Safety {
 
 	static public function register() {
 		#if (!SAFETY_DISABLE_SAFE_NAVIGATION || !SAFETY_DISABLE_SAFE_ARRAY)
-		Compiler.addGlobalMetadata('', '@:build(safety.macro.SafeAst.build())');
+		Compiler.addGlobalMetadata('', '@:build(safety.macro.SafeAst.buildSafeNavigationAndArray())');
 		#end
 		if(haxe.macro.Context.defined('display')) {
 			return;
@@ -85,7 +98,7 @@ class Safety {
 	 *  @throws NullPointerException if `value` is `null`.
 	 */
 	static public inline function sure<T>(value:Null<T>):T {
-		return value == null ? throw new safety.NullPointerException('Null pointer') : (value:Unsafe<T>);
+		return value == null ? throw new safety.NullPointerException('Null pointer in .sure() call') : (value:Unsafe<T>);
 	}
 
 	/**

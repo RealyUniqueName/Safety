@@ -14,5 +14,6 @@
 # -D SAFETY_DISABLE_SAFE_NAVIGATION
 # -D SAFETY_DISABLE_SAFE_ARRAY
 # -D SAFETY_DEBUG
+--macro Safety.safeApi('cases.TestSafeApi')
 
 extraParams.hxml
