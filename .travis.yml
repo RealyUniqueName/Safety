@@ -19,9 +19,8 @@ install:
     fi;
   - echo $(haxe -version)
   - haxelib setup ${HOME}/haxe/lib
-  - haxelib install exception
-  - haxelib install utest
   - haxelib install travix
+  - haxelib run travix install
 
 script:
   - haxe tests.hxml
