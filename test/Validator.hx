@@ -9,8 +9,8 @@ typedef ExpectedMessage = {symbol:String, pos:Position}
 
 class Validator {
 #if macro
-	static var expectedErrors:Array<ExpectedMessage>;
-	static var expectedWarnings:Array<ExpectedMessage>;
+	static var expectedErrors:Array<ExpectedMessage> = [];
+	static var expectedWarnings:Array<ExpectedMessage> = [];
 
 	static public function register() {
 		if(Context.defined('display')) return;

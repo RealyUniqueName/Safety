@@ -38,5 +38,16 @@ class TestSafeArray extends BaseCase {
 			case _: Assert.pass();
 		}
 	}
+
+	//TODO
+	// public function testMapDeclaration_shouldNotBeAffected() {
+	// 	var map:Map<String,String> = ['hello' => 'world'];
+	// 	Assert.isTrue(map.exists('hello'));
+	// }
+
+	// public function testMapDeclaration_withArrayComprehension_shouldNotBeAffected() {
+	// 	var map:Map<String,String> = [for(i in 0...1) 'hello' => 'world'];
+	// 	Assert.isTrue(map.exists('hello'));
+	// }
 	#end
 }

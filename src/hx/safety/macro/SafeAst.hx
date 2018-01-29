@@ -11,12 +11,39 @@ private typedef SafetyPath = {path:String, recursive:Bool}
 
 class SafeAst {
 	static var safeApiList:Array<SafetyPath> = [];
+	static var safeNavigationList:Array<SafetyPath> = [];
+	static var safeArrayList:Array<SafetyPath> = [];
+
+	/** Indicates if fields of a type under building were changed */
+	static var transformed:Bool = false;
+	/** Indicates if a type under building is in a path defined by `Safety.safeApi()` */
+	static var isInSafeApi:Bool = false;
+	/** Indicates if a type under building is in a path defined by `Safety.safeNavigation()` */
+	static var isInSafeNavigation:Bool = false;
+	/** Indicates if a type under building is in a path defined by `Safety.safeArray()` */
+	static var isInSafeArray:Bool = false;
 
 	/**
 	 *  `--macro Safety.safeApi()`
 	 */
 	static public function addSafeApi(path:String, recursive:Bool) {
 		safeApiList.push({path:path, recursive:recursive});
+		setGlobalBuildMacro();
+	}
+
+	/**
+	 *  `--macro Safety.safeNavigation()`
+	 */
+	static public function addSafeNavigation(path:String, recursive:Bool) {
+		safeNavigationList.push({path:path, recursive:recursive});
+		setGlobalBuildMacro();
+	}
+
+	/**
+	 *  `--macro Safety.safeArray()`
+	 */
+	static public function addSafeArray(path:String, recursive:Bool) {
+		safeArrayList.push({path:path, recursive:recursive});
 		setGlobalBuildMacro();
 	}
 
@@ -55,7 +82,10 @@ class SafeAst {
 		}
 
 		var typeName = ref.toString();
-		if(!typeName.isInPaths(safeApiList)) {
+		isInSafeApi = typeName.isInPaths(safeApiList);
+		isInSafeNavigation = typeName.isInPaths(safeNavigationList);
+		isInSafeArray = typeName.isInPaths(safeArrayList);
+		if(!isInSafeApi && !isInSafeNavigation && !isInSafeArray) {
 			return null;
 		}
 
@@ -63,13 +93,17 @@ class SafeAst {
 
 		var fields = Context.getBuildFields();
 		for(field in fields) {
-			switch(field.kind) {
-				case FVar(_, e):
-				case FProp(_, _, _, e):
+			var expr:Null<Expr> = switch(field.kind) {
+				case FVar(_, e): e;
+				case FProp(_, _, _, e): e;
 				case FFun(fn):
-					if(field.isPublic()) {
+					if(isInSafeApi && fn.expr != null && field.isPublic()) {
 						injectArgumentsChecking(fn, field.pos, typeName, field.name);
 					}
+					fn.expr;
+			}
+			if(expr != null) {
+				expr.expr = transform(expr).expr;
 			}
 		}
 
@@ -83,31 +117,29 @@ class SafeAst {
 		return field.access.indexOf(APublic) >= 0;
 	}
 
-	static var transformed:Bool = false;
+	// macro static public function buildSafeNavigationAndArray():Null<Array<Field>> {
+	// 	if(!Safety.plugin.isInSafety()) {
+	// 		return null;
+	// 	}
 
-	macro static public function buildSafeNavigationAndArray():Null<Array<Field>> {
-		if(!Safety.plugin.isInSafety()) {
-			return null;
-		}
+	// 	transformed = false;
 
-		transformed = false;
+	// 	var fields = [];
+	// 	var typeName = Context.getLocalClass().toString();
+	// 	for(field in Context.getBuildFields()) {
+	// 		var expr = switch(field.kind) {
+	// 			case FVar(_, e): e;
+	// 			case FProp(_, _, _, e): e;
+	// 			case FFun(fn): fn.expr;
+	// 		}
+	// 		if(expr != null) {
+	// 			expr.expr = transform(expr).expr;
+	// 		}
+	// 		fields.push(field);
+	// 	}
 
-		var fields = [];
-		var typeName = Context.getLocalClass().toString();
-		for(field in Context.getBuildFields()) {
-			var expr = switch(field.kind) {
-				case FVar(_, e): e;
-				case FProp(_, _, _, e): e;
-				case FFun(fn): fn.expr;
-			}
-			if(expr != null) {
-				expr.expr = transform(expr).expr;
-			}
-			fields.push(field);
-		}
-
-		return transformed ? fields : null;
-	}
+	// 	return transformed ? fields : null;
+	// }
 
 	static function injectArgumentsChecking(fn:Function, pos:Position, typeName:String, fieldName:String) {
 		if(fn.args.length == 0) {
@@ -139,17 +171,19 @@ class SafeAst {
 	}
 
 	static function transform(e:Expr):Expr {
-		return switch(e) {
-			#if !SAFETY_DISABLE_SAFE_NAVIGATION
+
+		if(isInSafeNavigation) switch(e) {
 			case macro $target!.$field:
 				transformed = true;
 				e = macro @:pos(e.pos) {
 					var _v_ = $target;
 					_v_ == null ? null : _v_.$field;
 				};
-				e.map(transform);
-			#end
-			#if !SAFETY_DISABLE_SAFE_ARRAY
+				return e.map(transform);
+			case _:
+		}
+
+		if(isInSafeArray) switch(e) {
 			//don't touch patterns in `case`
 			case macro ${{expr:ESwitch(target, cases, defaultCase)}}:
 				target = switch(target) {
@@ -171,15 +205,57 @@ class SafeAst {
 			//don't touch array declaration if a user is casting it manually
 			case macro ([$a{exprs}]:$type):
 				exprs = exprs.map(transform);
-				macro @:pos(e.pos) ([$a{exprs}]:$type);
+				return macro @:pos(e.pos) ([$a{exprs}]:$type);
 			//otherwise transform to ([...]:SafeArray<T>);
 			case macro [$a{exprs}]:
 				transformed = true;
 				exprs = exprs.map(transform);
-				macro @:pos(e.pos) ([$a{exprs}]:SafeArray<safety.macro.Monomorph<0>>);
-			#end
+				return macro @:pos(e.pos) ([$a{exprs}]:SafeArray<safety.macro.Monomorph<0>>);
 			case _:
-				e.map(transform);
 		}
+
+		return e.map(transform);
+		// return switch(e) {
+		// 	#if !SAFETY_DISABLE_SAFE_NAVIGATION
+		// 	case macro $target!.$field:
+		// 		transformed = true;
+		// 		e = macro @:pos(e.pos) {
+		// 			var _v_ = $target;
+		// 			_v_ == null ? null : _v_.$field;
+		// 		};
+		// 		e.map(transform);
+		// 	#end
+		// 	#if !SAFETY_DISABLE_SAFE_ARRAY
+		// 	//don't touch patterns in `case`
+		// 	case macro ${{expr:ESwitch(target, cases, defaultCase)}}:
+		// 		target = switch(target) {
+		// 			case macro [$a{exprs}]:
+		// 				macro @:pos(target.pos) [$a{exprs.map(transform)}];
+		// 			case macro ([$a{exprs}]):
+		// 				macro @:pos(target.pos) ([$a{exprs.map(transform)}]);
+		// 			case _:
+		// 				transform(target);
+		// 		}
+		// 		for(c in cases) {
+		// 			if(c.guard != null) c.guard = transform(c.guard);
+		// 			if(c.expr != null) c.expr = transform(c.expr);
+		// 		}
+		// 		if(defaultCase != null && defaultCase.expr != null) {
+		// 			defaultCase = transform(defaultCase);
+		// 		}
+		// 		return {expr:ESwitch(target, cases, defaultCase), pos:e.pos};
+		// 	//don't touch array declaration if a user is casting it manually
+		// 	case macro ([$a{exprs}]:$type):
+		// 		exprs = exprs.map(transform);
+		// 		macro @:pos(e.pos) ([$a{exprs}]:$type);
+		// 	//otherwise transform to ([...]:SafeArray<T>);
+		// 	case macro [$a{exprs}]:
+		// 		transformed = true;
+		// 		exprs = exprs.map(transform);
+		// 		macro @:pos(e.pos) ([$a{exprs}]:SafeArray<safety.macro.Monomorph<0>>);
+		// 	#end
+		// 	case _:
+		// 		e.map(transform);
+		// }
 	}
 }
