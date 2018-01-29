@@ -62,6 +62,9 @@ class SafeAst {
 	 */
 	static function isInPaths(fqn:String, paths:Array<SafetyPath>):Bool {
 		for(item in paths) {
+			if(item.path == '') {
+				return true;
+			}
 			if(fqn.indexOf(item.path) == 0) {
 				if(
 					item.recursive

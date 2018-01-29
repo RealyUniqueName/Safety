@@ -75,7 +75,7 @@ class Safety {
 	 *  @param path - Dot-path of a package or a fully qualified type name.
 	 *  @param recursive - Should we also apply to all sub-packages of `path`?
 	 */
-	static public function safeApi(path:String, recursive:Bool = false) {
+	static public function safeApi(path:String, recursive:Bool = true) {
 		SafeAst.addSafeApi(path, recursive);
 	}
 
@@ -94,7 +94,7 @@ class Safety {
 	 *  @param path - Dot-path of a package or a fully qualified type name.
 	 *  @param recursive - Should we also apply to all sub-packages/sub-types of `path`?
 	 */
-	static public function safeNavigation(path:String, recursive:Bool = false) {
+	static public function safeNavigation(path:String, recursive:Bool = true) {
 		SafeAst.addSafeNavigation(path, recursive);
 	}
 
@@ -107,7 +107,7 @@ class Safety {
 	 *  @param path - Dot-path of a package or a fully qualified type name.
 	 *  @param recursive - Should we also apply to all sub-packages/sub-types of `path`?
 	 */
-	static public function safeArray(path:String, recursive:Bool = false) {
+	static public function safeArray(path:String, recursive:Bool = true) {
 		SafeAst.addSafeArray(path, recursive);
 	}
 
