@@ -5,6 +5,7 @@ import haxe.macro.Compiler;
 import haxe.macro.Expr;
 import haxe.io.Path;
 import eval.vm.Context in EvalContext;
+import safety.macro.SafeAst;
 
 using haxe.macro.PositionTools;
 using haxe.io.Path;
@@ -33,7 +34,8 @@ class Safety {
 
 #if macro
 	/**
-	 *  Add this call to hxml to make public method in specifie `path` to throw `NullPointerException` if someone passes `null` there.
+	 *  Add this call to hxml to make public methods in specified `path` to throw `NullPointerException`
+	 *  if someone passes `null` as an argument value if that argument is not nullable.
 	 *  E.g.:
 	 *  ```
 	 *  --macro Safety.safeApi('my.pack', true)
@@ -42,7 +44,7 @@ class Safety {
 	 *  @param recursive - Should we also apply to all sub-packages of `path`?
 	 */
 	static public function safeApi(path:String, recursive:Bool = false) {
-		Compiler.addGlobalMetaData(path, '@:build(safety.macro.SafeAst.buildSafeApi()', recursive);
+		SafeAst.addSafeApi(path, recursive);
 	}
 
 	static public var plugin(get,never):SafetyPluginApi;

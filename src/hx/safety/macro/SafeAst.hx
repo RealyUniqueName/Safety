@@ -2,14 +2,85 @@ package safety.macro;
 
 import haxe.macro.Context;
 import haxe.macro.Expr;
+import haxe.macro.Compiler;
 
-using haxe.macro.ExprTools;
+using haxe.macro.Tools;
+using safety.macro.SafeAst;
+
+private typedef SafetyPath = {path:String, recursive:Bool}
 
 class SafeAst {
-	static var safeApiList:Array<String> = [];
+	static var safeApiList:Array<SafetyPath> = [];
 
-	static public function addSafeAst(path:String) {
-		safeApiList.push(path);
+	/**
+	 *  `--macro Safety.safeApi()`
+	 */
+	static public function addSafeApi(path:String, recursive:Bool) {
+		safeApiList.push({path:path, recursive:recursive});
+		setGlobalBuildMacro();
+	}
+
+	/**
+	 *  Adds global build macro. Even if this method is invoked multiple times, only one build macro is added
+	 */
+	static function setGlobalBuildMacro() {
+		if(globalMacroAdded) return;
+		globalMacroAdded = true;
+		Compiler.addGlobalMetadata('', '@:build(safety.macro.SafeAst.build())', true);
+	}
+	static var globalMacroAdded:Bool = false;
+
+	/**
+	 *  Check if a type with specified fully qualified name belongs to a list of paths.
+	 */
+	static function isInPaths(fqn:String, paths:Array<SafetyPath>):Bool {
+		for(item in paths) {
+			if(fqn.indexOf(item.path) == 0) {
+				if(
+					item.recursive
+					|| fqn == item.path
+					|| fqn.substr(item.path.length + 1).indexOf('.') < 0 // `+1` because we want to ignore the dot which separates package `item.path` from the module name
+				) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	macro static public function build():Array<Field> {
+		var ref = Context.getLocalClass();
+		if(ref == null) {
+			return null;
+		}
+
+		var typeName = ref.toString();
+		if(!typeName.isInPaths(safeApiList)) {
+			return null;
+		}
+
+		transformed = false;
+
+		var fields = Context.getBuildFields();
+		for(field in fields) {
+			switch(field.kind) {
+				case FVar(_, e):
+				case FProp(_, _, _, e):
+				case FFun(fn):
+					if(field.isPublic()) {
+						injectArgumentsChecking(fn, field.pos, typeName, field.name);
+					}
+			}
+		}
+
+		return (transformed ? fields : null);
+	}
+
+	/**
+	 *  Check if `field` has `public` accessor
+	 */
+	static inline function isPublic(field:Field):Bool {
+		return field.access.indexOf(APublic) >= 0;
 	}
 
 	static var transformed:Bool = false;
@@ -27,11 +98,7 @@ class SafeAst {
 			var expr = switch(field.kind) {
 				case FVar(_, e): e;
 				case FProp(_, _, _, e): e;
-				case FFun(fn):
-					if(field.access.indexOf(APublic) >= 0) {
-						injectArgumentsChecking(fn, field.pos, typeName, field.name);
-					}
-					fn.expr;
+				case FFun(fn): fn.expr;
 			}
 			if(expr != null) {
 				expr.expr = transform(expr).expr;
