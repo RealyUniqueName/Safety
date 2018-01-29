@@ -5,6 +5,7 @@ import haxe.macro.Expr;
 import haxe.io.Path;
 import eval.vm.Context in EvalContext;
 import safety.macro.SafeAst;
+import safety.macro.PluginLoadingException;
 import haxe.Exception;
 
 using haxe.io.Path;
@@ -20,8 +21,6 @@ typedef SafetyPluginApi = {
 	/** Returns a list of all warnings found during safety checks */
 	function getWarnings():Array<{msg:String, pos:Position}>;
 }
-
-private class PluginLoadingException extends Exception {}
 #end
 
 class Safety {
@@ -55,9 +54,9 @@ class Safety {
 			plugin.addPath(path);
 		} catch(e:PluginLoadingException) {
 			#if SAFETY_DEBUG
-			trace('Failed to load plugin: $e');
+			trace('Failed to load plugin: ${e.message}');
 			#end
-			Context.warning('Safety checks are turned off: current build of Safety is not compatible with your build of Haxe compiler. You may want to rebuild Safety to enable safety checks - see README.md.', Context.currentPos());
+			Context.warning('Safety checks are turned off: current build of Safety is not compatible with your build of Haxe compiler. You may want to rebuild Safety to enable safety checks (see README.md).', Context.currentPos());
 		}
 	}
 
@@ -146,7 +145,7 @@ class Safety {
 		} catch(e:PluginLoadingException) {
 			//Ignore plugin loading errors at this point. Will handle them on `Safety.enable()`
 			#if SAFETY_DEBUG
-			trace('Failed to load plugin: $e');
+			trace('Failed to load plugin: ${e.message}');
 			#end
 		}
 	}

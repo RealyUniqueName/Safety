@@ -2,6 +2,7 @@
 import haxe.macro.Context;
 import haxe.macro.Expr;
 import eval.vm.Context in EvalContext;
+import safety.macro.PluginLoadingException;
 
 typedef SafetyMessage = {msg:String, pos:Position}
 typedef ExpectedMessage = {symbol:String, pos:Position}
@@ -36,16 +37,23 @@ class Validator {
 	}
 
 	static function validate(_) {
-		var errors = check(expectedErrors, Safety.plugin.getErrors(), 'fail');
-		var warnings = check(expectedWarnings, Safety.plugin.getWarnings(), 'warn');
-		if(errors.ok && warnings.ok) {
-			Sys.println('${warnings.passed} expected warnings spotted');
-			Sys.println('${errors.passed} expected errors spotted');
-			Sys.println('Compile-time tests passed.');
-		} else {
-			if(!Context.defined('VALIDATOR_DONT_FAIL')) {
-				Context.error('Tests failed. See warnings.', Context.currentPos());
+		try {
+			var errors = check(expectedErrors, Safety.plugin.getErrors(), 'fail');
+			var warnings = check(expectedWarnings, Safety.plugin.getWarnings(), 'warn');
+			if(errors.ok && warnings.ok) {
+				Sys.println('${warnings.passed} expected warnings spotted');
+				Sys.println('${errors.passed} expected errors spotted');
+				Sys.println('Compile-time tests passed.');
+			} else {
+				if(!Context.defined('VALIDATOR_DONT_FAIL')) {
+					Context.error('Tests failed. See warnings.', Context.currentPos());
+				}
 			}
+		} catch(e:PluginLoadingException) {
+			//ignore this exception. It should be handled in Safety.hx at this point.
+			#if SAFETY_DEBUG
+			trace('Failed to load plugin: ${e.message}');
+			#end
 		}
 	}
 
