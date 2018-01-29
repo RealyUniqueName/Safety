@@ -23,7 +23,6 @@ class TestSafeArray extends BaseCase {
 		Assert.same([5], a);
 	}
 
-	#if !SAFETY_DISABLE_SAFE_ARRAY
 	public function testArrayDeclaration_automaticallyConvertedToSafeArray() {
 		var a = ["hello", "wtf"];
 		//If `a` was automatically typed as `SafeArray` out-of-bounds reading will throw
@@ -39,15 +38,13 @@ class TestSafeArray extends BaseCase {
 		}
 	}
 
-	//TODO
-	// public function testMapDeclaration_shouldNotBeAffected() {
-	// 	var map:Map<String,String> = ['hello' => 'world'];
-	// 	Assert.isTrue(map.exists('hello'));
-	// }
+	public function testMapDeclaration_shouldNotBeAffected() {
+		var map:Map<String,String> = ['hello' => 'world'];
+		Assert.isTrue(map.exists('hello'));
+	}
 
-	// public function testMapDeclaration_withArrayComprehension_shouldNotBeAffected() {
-	// 	var map:Map<String,String> = [for(i in 0...1) 'hello' => 'world'];
-	// 	Assert.isTrue(map.exists('hello'));
-	// }
-	#end
+	public function testMapDeclaration_withArrayComprehension_shouldNotBeAffected() {
+		var map:Map<String,String> = [for(i in 0...1) 'hello' => 'world'];
+		Assert.isTrue(map.exists('hello'));
+	}
 }
