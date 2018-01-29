@@ -7,7 +7,7 @@ class NullCheck<T> {}
 abstract GenericCheck<T>(Null<T>) {
 	public inline function new(value:T, type:String, method:String, argument:String) {
 		this = value;
-		if(value == null) {
+		if(this == null) {
 			throw new NullPointerException('Null is not allowed for argument $argument in $type.$method()');
 		}
 	}
@@ -41,8 +41,11 @@ class NullCheckBuilder {
 		switch(Context.getLocalType()) {
 			case TInst(_.toString() => 'safety.macro.NullCheck', [type]):
 				switch(getNullability(type)) {
-					case Implicit:
+					case Implicit | Explicit:
 						var complexType = type.toComplexType();
+						if(complexType == null) {
+							complexType = macro:safety.macro.Monomorph<0>;
+						}
 						return macro:safety.macro.NullCheck.GenericCheck<$complexType>;
 					case _:
 						return macro:safety.macro.NullCheck.NoCheck;
@@ -52,13 +55,17 @@ class NullCheckBuilder {
 		}
 	}
 
-	static function getNullability(type:Type):Nullability {
+	static function getNullability(type:Type, depth:Int = 0):Nullability {
+		//guard against infinite monomorph resolution
+		if(depth > 100) {
+			return Implicit;
+		}
 		return
 			switch (type) {
 				case null:
 					Implicit;
 				case TMono(_.get() => t):
-					getNullability(type);
+					getNullability(type, depth + 1);
 				case TLazy(f):
 					getNullability(f());
 				case TType(_, _):

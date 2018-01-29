@@ -128,7 +128,7 @@ class SafeAst {
 		var checks = [];
 		for(arg in fn.args) {
 			if(arg.opt || arg.value != null) continue;
-			var argType = arg.type;
+			var argType = (arg.type == null ? macro:safety.macro.Monomorph<0> : arg.type);
 			checks.push(macro @:pos(pos) new safety.macro.NullCheck<$argType>($i{arg.name}, $v{typeName}, $v{fieldName}, $v{arg.name}));
 		}
 		if(checks.length == 0) {
