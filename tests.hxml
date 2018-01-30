@@ -5,7 +5,6 @@
 -debug
 -main Test
 -D analyzer-optimize
-# -js bin/test.js
 
 --macro Safety.enable('cases', false)
 --macro Safety.safeArray('cases.TestSafeArray')

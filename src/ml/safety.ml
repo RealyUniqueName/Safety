@@ -1426,6 +1426,7 @@ class plugin =
 		val report = { sr_errors = []; sr_warnings = [] }
 		val mutable check_paths = []
 		val mutable executed = false
+		val mutable complete_callbacks = []
 		(**
 			Plugin API: this method should be executed at initialization macro time
 		*)
@@ -1450,6 +1451,7 @@ class plugin =
 					if not (raw_defined com "SAFETY_SILENT") then
 						List.iter (fun err -> com.error err.sm_msg err.sm_pos) (List.rev report.sr_errors);
 					t();
+					List.iter (fun callback -> ignore (callback())) complete_callbacks
 				)
 			end;
 			(* This is because of vfun0 should return something *)
@@ -1459,6 +1461,15 @@ class plugin =
 		*)
 		method add_path (dot_path:value) =
 			check_paths <- EvalDecode.decode_string dot_path :: check_paths;
+			vnull
+		(**
+			Plugin API: add a callback to invoke when all safety checks are finished.
+		*)
+		method on_complete (callback:value) =
+			(match callback with
+				| VFunction (Fun0 fn, _) -> complete_callbacks <- fn :: complete_callbacks
+				| _ -> exc_string "Invalid type of callback. Should be Void->Void"
+			);
 			vnull
 		(**
 			Plugin API: returns a list of all errors found during safety checks
@@ -1505,4 +1516,5 @@ EvalStdLib.StdContext.register [
 	("addPath", vfun1 api#add_path);
 	("getErrors", vfun0 api#get_errors);
 	("getWarnings", vfun0 api#get_warnings);
+	("onComplete", vfun1 api#on_complete);
 ]

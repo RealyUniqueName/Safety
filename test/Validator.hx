@@ -15,7 +15,14 @@ class Validator {
 
 	static public function register() {
 		if(Context.defined('display')) return;
-		Context.onAfterTyping(validate);
+		try {
+			Safety.plugin.onComplete(validate);
+		} catch(e:PluginLoadingException) {
+			//ignore this exception. It should be handled in Safety.hx at this point.
+			#if SAFETY_DEBUG
+			trace('Failed to load plugin: ${e.message}');
+			#end
+		}
 		expectedErrors = [];
 		expectedWarnings = [];
 	}
@@ -36,7 +43,7 @@ class Validator {
 		return null;
 	}
 
-	static function validate(_) {
+	static function validate() {
 		try {
 			var errors = check(expectedErrors, Safety.plugin.getErrors(), 'fail');
 			var warnings = check(expectedWarnings, Safety.plugin.getWarnings(), 'warn');
