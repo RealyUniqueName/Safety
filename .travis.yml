@@ -12,8 +12,8 @@ haxe:
   - development
 
 install:
-  - rm -rf ${HOME}/haxe/*
   - if [ "$TRAVIS_HAXE_VERSION" == "development" ]; then
+      rm -rf ${HOME}/haxe/*
       if [ `uname` = "Linux" ]; then
         curl -s -L --retry 3 'http://hxbuilds.s3-website-us-east-1.amazonaws.com/builds/haxe/linux64/haxe_2018-01-23_development_ceeba64.tar.gz' | tar -C ${HOME}/haxe -x -z --strip-components=1 -f -;
       else
