@@ -1,7 +1,6 @@
 #if macro
 import haxe.macro.Context;
 import haxe.macro.Expr;
-import eval.vm.Context in EvalContext;
 import safety.macro.PluginLoadingException;
 
 typedef SafetyMessage = {msg:String, pos:Position}

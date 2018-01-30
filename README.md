@@ -163,6 +163,7 @@ static public inline function run<T>(value:Null<T>, callback:T->Void):Void;
 static public inline function apply<T>(value:Null<T>, callback:T->Void):Null<T>;
 /**
 *  Prints `true` if provided expression can not evaluate to `null` at runtime. Prints `false` otherwise.
+*  Always prints `false` if invoked outside of a path passed to `Safety.enable()`
 */
 macro static public function isSafe(expr:Expr):ExprOf<Void>
 ```

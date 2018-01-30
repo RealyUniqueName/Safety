@@ -6,7 +6,6 @@ import haxe.io.Path;
 import eval.vm.Context in EvalContext;
 import safety.macro.SafeAst;
 import safety.macro.PluginLoadingException;
-import haxe.Exception;
 
 using haxe.io.Path;
 using sys.FileSystem;
@@ -28,7 +27,7 @@ typedef SafetyPluginApi = {
 class Safety {
 	/**
 	 *  Prints `true` at compile time if provided expression can not be evaluated to `null` at run time. Prints `false` otherwise.
-	 *  Always returns `false` if invoked outside of a path passed to `Safety.enable()`
+	 *  Always prints `false` if invoked outside of a path passed to `Safety.enable()`
 	 */
 	macro static public function isSafe(expr:Expr):ExprOf<Void> {
 		return macro @:pos(expr.pos) @:privateAccess Safety._isSafe($expr);
