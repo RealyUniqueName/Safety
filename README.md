@@ -1,12 +1,18 @@
 # Safety [![Build Status](https://travis-ci.org/RealyUniqueName/Safety.svg?branch=master)](https://travis-ci.org/RealyUniqueName/Safety)
 
-This is a null safety implementation as a plugin for Haxe compiler. It's an attempt to push Haxe towards null safety implementation in the compiler.
+This library implements a few features for writing Haxe code which generates less null pointer errors. These features: are safe navigation operator, safe arrays, safe api (automatic checks of method arguments for `null`) and null safety.
+
+Most features are compatible with Haxe 3.4 except null safety.
+
+Null safety is implemented as a plugin for Haxe compiler. At least Haxe 4.0.0-preview.2 is required to enable null safety.
+
+It's an attempt to push Haxe towards null safety implementation in the compiler.
 Use this plugin, report bugs and share your thoughts in [issues](https://github.com/RealyUniqueName/Safety/issues).
 Hopefully we can find the best approach to null safety together. And then with all the collected experience we will be able to propose a solid implementation to the compiler.
 
 ## Installation
 
-Minimum supported Haxe version is `4.0.0-preview.2`, but pre-built binaries are only compatible with commit ceeba64 (and a few later) of development branch of Haxe.
+Minimum supported Haxe version for null safety is 4.0.0-preview.2, but pre-built binaries are only compatible with commit ceeba64 (and a few later) of development branch of Haxe.
 
 Compatible compiler nightlies for x64 systems: [Windows](http://hxbuilds.s3-website-us-east-1.amazonaws.com/builds/haxe/windows64-installer/haxe_2018-01-23_development_ceeba64.zip), [Mac](http://hxbuilds.s3-website-us-east-1.amazonaws.com/builds/haxe/mac-installer/haxe_2018-01-25_development_ceeba64.tar.gz), [Linux](http://hxbuilds.s3-website-us-east-1.amazonaws.com/builds/haxe/linux64/haxe_2018-01-23_development_ceeba64.tar.gz).
 
@@ -25,7 +31,7 @@ make PLUGIN=path/to/safety/src/ml/safety plugin
 Add `-lib safety` to your hxml file.
 Use following compiler arguments:
 
-* `--macro Safety.enable(dotPath, enableAdditionalFeatures)` - Enable null safety for the specified path. E.g. `--macro Safety.enable('my.pack')` to enable it for all the types in `my.pack` and in subpackages. Or `--macro Safety.enable('my.pack.MyClass')` to enable it for `my.pack.MyClass` only. Additional features are safe navigation operator, safe api and SafeArray. Each feature can be enabled separately if you pass `false` to `enableAdditionalFeatures`. The default value is `true`. More on the features below.
+* `--macro Safety.enable(dotPath, enableAdditionalFeatures)` (requires Haxe 4.0.0-preview.2 or later) - Enable null safety for the specified path. E.g. `--macro Safety.enable('my.pack')` to enable it for all the types in `my.pack` and in subpackages. Or `--macro Safety.enable('my.pack.MyClass')` to enable it for `my.pack.MyClass` only. Additional features are safe navigation operator, safe api and SafeArray. Each feature can be enabled separately if you pass `false` to `enableAdditionalFeatures`. The default value is `true`. More on the features below.
 * `--macro Safety.safeNavigation(dotPath, recursive)` - Enables [safe navigation operator](https://en.wikipedia.org/wiki/Safe_navigation_operator) `!.` in the specified path. if `recursive` is `true` (it is by default), then `!.` operator is also enabled for subpackages in `dotPath`.
 * `--macro Safety.safeArray(dotPath, recursive)` - Makes all array declarations to be typed as `SafeArray`. See [feature description](#safe-array) for details.
 * `--macro Safety.safeApi(dotPath, recursive)` - Adds runtime checking for not-nullable arguments of public methods in the specified path. If `null` is passed to such an argument, then `safety.IllegalArgumentException` is thrown. [Details](#safe-api)

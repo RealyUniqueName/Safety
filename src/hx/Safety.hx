@@ -51,6 +51,7 @@ class Safety {
 		}
 
 		#if (haxe_ver < '4.0.0')
+		Context.warning('Null safety is disabled: at least Haxe 4.0.0-preview.2 is required.', Context.currentPos());
 		return;
 		#end
 
@@ -60,7 +61,7 @@ class Safety {
 			#if SAFETY_DEBUG
 			trace('Failed to load plugin: ${e.message}');
 			#end
-			Context.warning('Safety checks are turned off: current build of Safety is not compatible with your build of Haxe compiler. You may want to rebuild Safety to enable safety checks (see README.md).', Context.currentPos());
+			Context.warning('Null safety is disabled: current build of Safety is not compatible with your build of Haxe compiler. You may want to rebuild Safety to enable null safety (see README.md).', Context.currentPos());
 		}
 	}
 
