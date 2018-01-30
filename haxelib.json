@@ -1,6 +1,6 @@
 {
 	"name"         : "safety",
-	"url"          : "https://github.com/RealyUniqueName/Haxe-Safety",
+	"url"          : "https://github.com/RealyUniqueName/Safety",
 	"license"      : "MIT",
 	"tags"         : ["null", "safety", "npe"],
 	"description"  : "Null safety for Haxe.",

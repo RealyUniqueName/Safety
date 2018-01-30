@@ -16,11 +16,15 @@ Minimum supported Haxe version for null safety is 4.0.0-preview.2, but pre-built
 
 Compatible compiler nightlies for x64 systems: [Windows](http://hxbuilds.s3-website-us-east-1.amazonaws.com/builds/haxe/windows64-installer/haxe_2018-01-23_development_ceeba64.zip), [Mac](http://hxbuilds.s3-website-us-east-1.amazonaws.com/builds/haxe/mac-installer/haxe_2018-01-25_development_ceeba64.tar.gz), [Linux](http://hxbuilds.s3-website-us-east-1.amazonaws.com/builds/haxe/linux64/haxe_2018-01-23_development_ceeba64.tar.gz).
 
-Install Safety:
+Install Safety from haxelib:
+```
+haxelib install safety
+```
+or the latest development version from github:
 ```
 haxelib git safety https://github.com/RealyUniqueName/Safety.git
 ```
-If you want to use this plugin with another OS, arch or another version of Haxe you need to setup desired version of Haxe for development (see [Building Haxe from source](https://haxe.org/documentation/introduction/building-haxe.html)) and then
+If you want to use null safety plugin with another OS, arch or another version of Haxe you need to setup desired version of Haxe for development (see [Building Haxe from source](https://haxe.org/documentation/introduction/building-haxe.html)) and then
 ```
 cd path/to/haxe-source/
 make PLUGIN=path/to/safety/src/ml/safety plugin
