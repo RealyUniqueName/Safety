@@ -1,30 +1,32 @@
 #if macro
 import haxe.macro.PositionTools;
 import haxe.macro.Context;
-import haxe.macro.Compiler;
 import haxe.macro.Expr;
 import haxe.io.Path;
 import eval.vm.Context in EvalContext;
+import safety.macro.SafeAst;
+import safety.macro.PluginLoadingException;
+import haxe.Exception;
 
-using haxe.macro.PositionTools;
 using haxe.io.Path;
 using sys.FileSystem;
 
 typedef SafetyPluginApi = {
 	/** This method should be executed at initialization macro time */
 	function run():Void;
+	/** Check specified dot-path for null safety. */
+	function addPath(path:String):Void;
 	/** Returns a list of all errors found during safety checks */
 	function getErrors():Array<{msg:String, pos:Position}>;
 	/** Returns a list of all warnings found during safety checks */
 	function getWarnings():Array<{msg:String, pos:Position}>;
-	/** Check if current macro position should be handled by Safety (based on `-D SAFETY=` flag) */
-	function isInSafety():Bool;
 }
 #end
 
 class Safety {
 	/**
-	 *  Prints `true` at compile time if provided expression can not be evaluated to `null` at runtime. Prints `false` otherwise.
+	 *  Prints `true` at compile time if provided expression can not be evaluated to `null` at run time. Prints `false` otherwise.
+	 *  Always returns `false` if invoked outside of a path passed to `Safety.enable()`
 	 */
 	macro static public function isSafe(expr:Expr):ExprOf<Void> {
 		return macro @:pos(expr.pos) @:privateAccess Safety._isSafe($expr);
@@ -32,6 +34,83 @@ class Safety {
 	static function _isSafe(ident:Dynamic):Void {}; //Handled in plugin
 
 #if macro
+	/**
+	 *  Enable null safety checking for specified dot-path.
+	 *  @param path - Dot-path of a package or a fully qualified type name.
+	 *  @param enableAdditionalFeatures - Enable all additional features on that `path`. You can enable each feature separately instead. See `Safety.safe*()` methods.
+	 */
+	static public function enable(path:String, enableAdditionalFeatures:Bool = true) {
+		if(enableAdditionalFeatures) {
+			SafeAst.addSafeApi(path, true);
+			SafeAst.addSafeNavigation(path, true);
+			SafeAst.addSafeArray(path, true);
+		}
+
+		if(Context.defined('display')) {
+			return;
+		}
+
+		try {
+			plugin.addPath(path);
+		} catch(e:PluginLoadingException) {
+			#if SAFETY_DEBUG
+			trace('Failed to load plugin: ${e.message}');
+			#end
+			Context.warning('Safety checks are turned off: current build of Safety is not compatible with your build of Haxe compiler. You may want to rebuild Safety to enable safety checks (see README.md).', Context.currentPos());
+		}
+	}
+
+	/**
+	 *  Add this call to hxml to make public methods in specified `path` to throw `NullPointerException`
+	 *  if someone passes `null` as an argument value and that argument is not nullable.
+	 *  ```
+	 *  public function job(str:String) {...}
+	 *  <...>
+	 *  job(null); //throws safety.NullPointerException
+	 *  ```
+	 *  Example for hxml:
+	 *  ```
+	 *  --macro Safety.safeApi('my.pack', true)
+	 *  ```
+	 *  @param path - Dot-path of a package or a fully qualified type name.
+	 *  @param recursive - Should we also apply to all sub-packages of `path`?
+	 */
+	static public function safeApi(path:String, recursive:Bool = true) {
+		SafeAst.addSafeApi(path, recursive);
+	}
+
+	/**
+	 *  Add this call to hxml to enable safe navigation operator `!.`:
+	 *  ```
+	 *  var s:Null<String> = null;
+	 *  trace(s!.length); //null
+	 *  s = 'wow';
+	 *  trace(s!.length); //3
+	 *  ```
+	 *  Example for hxml:
+	 *  ```
+	 *  --macro Safety.safeNavigation('my.pack', true)
+	 *  ```
+	 *  @param path - Dot-path of a package or a fully qualified type name.
+	 *  @param recursive - Should we also apply to all sub-packages/sub-types of `path`?
+	 */
+	static public function safeNavigation(path:String, recursive:Bool = true) {
+		SafeAst.addSafeNavigation(path, recursive);
+	}
+
+	/**
+	 *  Add this call to hxml to enable auto-casting all array declarations to `SafeArray`:
+	 *  Example for hxml:
+	 *  ```
+	 *  --macro Safety.safeArray('my.pack', true)
+	 *  ```
+	 *  @param path - Dot-path of a package or a fully qualified type name.
+	 *  @param recursive - Should we also apply to all sub-packages/sub-types of `path`?
+	 */
+	static public function safeArray(path:String, recursive:Bool = true) {
+		SafeAst.addSafeArray(path, recursive);
+	}
+
 	static public var plugin(get,never):SafetyPluginApi;
 	static var _plugin:SafetyPluginApi;
 	static function get_plugin():SafetyPluginApi {
@@ -39,26 +118,10 @@ class Safety {
 			try {
 				_plugin = EvalContext.loadPlugin(getPluginPath());
 			} catch(e:Dynamic) {
-				#if SAFETY_DEBUG
-				trace('Failed to load plugin: $e');
-				#end
-				Context.error('Current build of Safety is not compatible with your build of Haxe compiler. You need to rebuild Safety (see README.md)', Context.currentPos());
+				throw new PluginLoadingException(Std.string(e));
 			}
 		}
 		return _plugin;
-	}
-
-	static public function register() {
-		#if (!SAFETY_DISABLE_SAFE_NAVIGATION || !SAFETY_DISABLE_SAFE_ARRAY)
-		Compiler.addGlobalMetadata('', '@:build(safety.macro.SafeAst.build())');
-		#end
-		if(haxe.macro.Context.defined('display')) {
-			return;
-		}
-		if(!Context.defined('SAFETY')) {
-			Context.error('-D SAFETY is not defined. Define it like "-D SAFETY=SomeClass,my.pack,another.pack.AnotherClass,/path/to/dir"', Context.currentPos());
-		}
-		plugin.run();
 	}
 
 	static public function getPluginPath():String {
@@ -70,6 +133,21 @@ class Safety {
 			path = Path.join([srcDir, 'bin', Sys.systemName(), 'safety.cmxs']);
 		}
 		return path;
+	}
+
+	static public function register() {
+		if(Context.defined('display')) {
+			return;
+		}
+
+		try {
+			plugin.run();
+		} catch(e:PluginLoadingException) {
+			//Ignore plugin loading errors at this point. Will handle them on `Safety.enable()`
+			#if SAFETY_DEBUG
+			trace('Failed to load plugin: ${e.message}');
+			#end
+		}
 	}
 #else
 
@@ -85,7 +163,7 @@ class Safety {
 	 *  @throws NullPointerException if `value` is `null`.
 	 */
 	static public inline function sure<T>(value:Null<T>):T {
-		return value == null ? throw new safety.NullPointerException('Null pointer') : (value:Unsafe<T>);
+		return value == null ? throw new safety.NullPointerException('Null pointer in .sure() call') : (value:Unsafe<T>);
 	}
 
 	/**

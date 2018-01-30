@@ -686,30 +686,26 @@ let process_condition condition (is_nullable_expr:texpr->bool) callback =
 (**
 	Check if specified `path` is mentioned in `-D SAFETY=here`
 *)
-let need_check com type_path file_path =
+let need_check com check_paths type_path =
 	let starts_with (haystack:string) (needle:string) :bool =
 		(String.length haystack >= String.length needle)
 		&& (needle = String.sub haystack 0 (String.length needle))
 	in
-	match type_path with
-		| ([], "Safety") -> false
-		| (packages, name) ->
-			try
-				let file_path = Path.unique_full_path file_path
-				and class_path = (String.concat "." packages) ^ (if List.length packages = 0 then "" else ".") ^ name in
-				let rec find lst =
-					match lst with
-						| [] -> false
-						| ["ALL"] -> true
-						| current :: rest ->
-							if starts_with class_path current || starts_with file_path (Path.unique_full_path current) then
-								true
-							else
-								find rest
-				and check_list = Str.split (Str.regexp ",") (String.trim (raw_defined_value com "SAFETY")) in
-				find check_list
-			with
-				| Not_found -> false
+	let class_path =
+		match type_path with
+			| ([], name) -> name
+			| (pack, name) -> (String.concat "." pack) ^ "." ^ name
+	in
+	let rec traverse paths =
+		match paths with
+			| [] -> false
+			| current :: rest ->
+				if current = "" || starts_with class_path current then
+					true
+				else
+					traverse rest
+	in
+	traverse check_paths
 
 (**
 	Check if specified `field` represents a `var` field which will exist at runtime.
@@ -1428,31 +1424,42 @@ class class_checker cls report =
 class plugin =
 	object (self)
 		val report = { sr_errors = []; sr_warnings = [] }
+		val mutable check_paths = []
+		val mutable executed = false
 		(**
 			Plugin API: this method should be executed at initialization macro time
 		*)
 		method run () =
-			let com = (get_ctx()).curapi.get_com() in
-			add_typing_filter com (fun types ->
-				let t = Gencommon.timer ["safety plugin"] in
-				let rec traverse com_type =
-					match com_type with
-						| TEnumDecl enm -> ()
-						| TTypeDecl typedef -> ()
-						| TAbstractDecl abstr -> ()
-						| TClassDecl cls when not (need_check com cls.cl_path cls.cl_pos.pfile) -> ()
-						| TClassDecl cls ->
-							if raw_defined com "SAFETY_DEBUG" then
-								print_endline ("Safety check: " ^ (str_type (TInst (cls, []))));
-							(new class_checker cls report)#check
-				in
-				List.iter traverse types;
-				if not (raw_defined com "SAFETY_SILENT") then
-					List.iter (fun err -> com.error err.sm_msg err.sm_pos) (List.rev report.sr_errors);
-				t();
-			);
+			if not executed then begin
+				executed <- true;
+				let com = (get_ctx()).curapi.get_com() in
+				add_typing_filter com (fun types ->
+					let t = Gencommon.timer ["safety plugin"] in
+					let rec traverse com_type =
+						match com_type with
+							| TEnumDecl enm -> ()
+							| TTypeDecl typedef -> ()
+							| TAbstractDecl abstr -> ()
+							| TClassDecl cls when not (need_check com check_paths cls.cl_path) -> ()
+							| TClassDecl cls ->
+								if raw_defined com "SAFETY_DEBUG" then
+									print_endline ("Safety check: " ^ (str_type (TInst (cls, []))));
+								(new class_checker cls report)#check
+					in
+					List.iter traverse types;
+					if not (raw_defined com "SAFETY_SILENT") then
+						List.iter (fun err -> com.error err.sm_msg err.sm_pos) (List.rev report.sr_errors);
+					t();
+				)
+			end;
 			(* This is because of vfun0 should return something *)
-			vint32 (Int32.of_int 0)
+			vnull
+		(**
+			Plugin API: add dot-path to safety
+		*)
+		method add_path (dot_path:value) =
+			check_paths <- EvalDecode.decode_string dot_path :: check_paths;
+			vnull
 		(**
 			Plugin API: returns a list of all errors found during safety checks
 		*)
@@ -1464,24 +1471,8 @@ class plugin =
 		method get_warnings () =
 			self#serialize_messages report.sr_warnings
 		(**
-			Plugin API: Check if current macro position should be handled by Safety (based on `-D SAFETY=` flag) for preprocessing safe-call operator `!.`
+			Serialize errors&warnings to send them to the Haxe-side
 		*)
-		method is_in_safety () =
-			let api = (get_ctx()).curapi in
-			match api.get_local_type() with
-				| None -> vfalse
-				| Some t ->
-					let check type_path file_path =
-						if need_check (api.get_com()) type_path file_path then
-							vtrue
-						else
-							vfalse
-					in
-					match t with
-						| TInst (cls, _) -> check cls.cl_path cls.cl_pos.pfile
-						| TAbstract (abstr, _) -> check abstr.a_path abstr.a_pos.pfile
-						| _ -> vfalse
-
 		method private serialize_messages messages =
 			let arr = Array.make (List.length messages) vnull in
 			let set_item idx msg p =
@@ -1511,7 +1502,7 @@ let api = new plugin in
 
 EvalStdLib.StdContext.register [
 	("run", vfun0 api#run);
+	("addPath", vfun1 api#add_path);
 	("getErrors", vfun0 api#get_errors);
 	("getWarnings", vfun0 api#get_warnings);
-	("isInSafety", vfun0 api#is_in_safety);
 ]

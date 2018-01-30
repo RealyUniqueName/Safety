@@ -14,7 +14,7 @@ Install Safety:
 ```
 haxelib git safety https://github.com/RealyUniqueName/Safety.git
 ```
-If you want to use this plugin with another OS, arch or a another version of Haxe you need to setup desired version of Haxe for development (see [Building Haxe from source](https://haxe.org/documentation/introduction/building-haxe.html)) and then
+If you want to use this plugin with another OS, arch or another version of Haxe you need to setup desired version of Haxe for development (see [Building Haxe from source](https://haxe.org/documentation/introduction/building-haxe.html)) and then
 ```
 cd path/to/haxe-source/
 make PLUGIN=path/to/safety/src/ml/safety plugin
@@ -23,20 +23,27 @@ make PLUGIN=path/to/safety/src/ml/safety plugin
 ## Usage
 
 Add `-lib safety` to your hxml file.
-Use following flags:
+Use following compiler arguments:
 
-* `-D SAFETY=location1,location2` (required) - Use this flag to specify which location(s) you want plugin to check for null safety. This is a comma-separated list of packages, class names and filesystem paths. E.g. `-D SAFETY=Main,some.pack,another.pack.AnotherClass,path/to/src`. You can specify `-D SAFETY=ALL` instead which will check all the code, even std lib (not recommended)
-* `-D SAFETY_DISABLE_SAFE_NAVIGATION` (optional) - Disables [safe navigation operator](https://en.wikipedia.org/wiki/Safe_navigation_operator) `!.` By default Safety handles `!.` for safe navigation. If you are using postfix `!` operator for other purposes, you can use this flag to prevent Safety from transforming it.
-* `-D SAFETY_DISABLE_SAFE_ARRAY` (optional) - do not type array declarations as `SafeArray<T>`. By default all `[1, 2, 3]` is converted to `([1, 2, 3]:SafeArray<Int>)`. This flag disables automatic casting of array declarations to `SafeArray`.
-* `-D SAFETY_SILENT` (optional) - do not abort compilation on safety errors. You can handle safety errors manually in `Context.onAfterTyping(_ -> trace(Safety.plugin.getErrors()))`
-* `-D SAFETY_DEBUG` (optional) - prints additional information during safety checking.
+* `--macro Safety.enable(dotPath, enableAdditionalFeatures)` - Enable null safety for the specified path. E.g. `--macro Safety.enable('my.pack')` to enable it for all the types in `my.pack` and in subpackages. Or `--macro Safety.enable('my.pack.MyClass')` to enable it for `my.pack.MyClass` only. Additional features are safe navigation operator, safe api and SafeArray. Each feature can be enabled separately if you pass `false` to `enableAdditionalFeatures`. The default value is `true`. More on the features below.
+* `--macro Safety.safeNavigation(dotPath, recursive)` - Enables [safe navigation operator](https://en.wikipedia.org/wiki/Safe_navigation_operator) `!.` in the specified path. if `recursive` is `true` (it is by default), then `!.` operator is also enabled for subpackages in `dotPath`.
+* `--macro Safety.safeArray(dotPath, recursive)` - Makes all array declarations to be typed as `SafeArray`. See [feature description](#safe-array) for details.
+* `--macro Safety.safeApi(dotPath, recursive)` - Adds runtime checking for not-nullable arguments of public methods in the specified path. If `null` is passed to such an argument, then `safety.IllegalArgumentException` is thrown. [Details](#safe-api)
+* `-D SAFETY_SILENT` - do not abort compilation on safety errors. You can handle safety errors manually in `Context.onAfterTyping(_ -> trace(Safety.plugin.getErrors()))`
+* `-D SAFETY_DEBUG` - prints additional information during safety checking.
+
+All `--macro Safety.*` arguments can be used multiple times with different `dotPath` values.
+
+You can pass empty string `""` as any `dotPath` to apply a feature to the whole codebase (not recommended, because a lot of compilation errors will come from std lib).
 
 ## Features
 
-* Safety makes sure you will not pass nullable values to places which are not explicitly declared with `Null<SomeType>` (assignments, return statements, array access etc.);
+### Compile time safety checking
+
+* Safety makes sure you will not pass nullable values to the places which are not explicitly declared with `Null<SomeType>` (assignments, return statements, array access etc.);
 ```haxe
 function fn(s:String) {}
-var nullable:Null<String> = 'hello';
+var nullable:Null<String> = getNullableStr();
 var str:String = null; //Compilation error
 str = nullable; //Compilation error
 fn(nullable); //Compilation error. Function argument `str` is not nullable
@@ -72,15 +79,53 @@ function doStuff(a:Null<String>) {
     var s:String = a; //OK
 }
 ```
-* Safe navigation operator
+
+### Safe navigation operator
+
+Adds safe navigation operator `!.` to Haxe syntax. Compiler argument to enable it: `--macro Safety.safeNavigation(my.pack)`
+
 ```haxe
 var obj:Null<{ field:Null<String> }> = null;
 trace(obj!.field!.length); //null
 obj = { field:'hello' };
 trace(obj!.field!.length); //5
 ```
-* `SafeArray<T>` (abstract over `Array<T>`) which behaves exactly like `Array<T>` except it prevents out-of-bounds reading/writing (throws `safety.OutOfBoundsException`). See [Limitations](#limitations) to find out why you need it.
-* Static extensions for convenience:
+
+### Safe array
+
+`SafeArray<T>` (abstract over `Array<T>`) behaves exactly like `Array<T>` except it prevents out-of-bounds reading/writing (throws `safety.OutOfBoundsException`). See [Limitations](#limitations) to find out why you need it.
+
+If `--macro Safety.safeArray(my.pack)` is in effect, then all array declarations become `SafeArray`:
+```haxe
+var a = ['hello', 'world'];
+$type(a); //SafeArray<String>
+```
+You can add explicit typing to `Array<T>` (or another type) if you want to disable `SafeArray` for a single expression:
+```haxe
+var a = (['hello', 'world']:Array<String>);
+$type(a); //Array<String>
+```
+
+### Safe api
+
+Compiler argument to enable this feature: `--macro Safety.safeApi(my.pack)`.
+
+If enabled it adds runtime checking against `null` for all not-nullable arguments of public methods:
+```haxe
+public function method(arg:String) {}
+<...>
+method(null); //throws safety.IllegalArgumentException
+```
+It's pretty cheap performance wise, because it just adds a simple line to the body of a method: `if(arg == null) throw new IllegalArgumentException();`
+
+If argument is nullable, no check is generated.
+
+Also safe api does not generate such checks for `Int`, `Float`, `Bool` (and other basic types) on static targets, because it's impossible to assign `null` to such types on static targets.
+
+This feature is especially useful if you are creating a library, and you don't want your users to pass `null`s to your API. You can add `--macro Safety.safeApi('my.lib')` to `extraParams.hxml`.
+
+### Static extensions for convenience
+
 ```haxe
 using Safety;
 
@@ -126,7 +171,6 @@ macro static public function isSafe(expr:Expr):ExprOf<Void>
 
 * Safe navigation operator `!.` does not provide code completion.
 * Haxe was not designed with null safety in mind, so it's always possible `null` will come to your code from 3rd-party code or even from std lib.
-Safety doesn't perform automatic runtime checks for any values which you get from any code.
 * Out-of-bounds array read returns `null`, but Haxe types it without `Null<>`. ([PR to the compiler to fix this issue](https://github.com/HaxeFoundation/haxe/pull/6825))
 ```haxe
 var a:Array<String> = ["hello"];

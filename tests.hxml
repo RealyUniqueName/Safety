@@ -7,12 +7,14 @@
 -D analyzer-optimize
 # -js bin/test.js
 
+--macro Safety.enable('cases', false)
+--macro Safety.safeArray('cases.TestSafeArray')
+--macro Safety.safeApi('cases.TestSafeApi')
+--macro Safety.safeNavigation('cases.TestSafeNavigation')
+-D SAFETY_SILENT
+# -D SAFETY_DEBUG
+
 --macro Validator.register()
 # -D VALIDATOR_DONT_FAIL
--D SAFETY=test
--D SAFETY_SILENT
-# -D SAFETY_DISABLE_SAFE_NAVIGATION
-# -D SAFETY_DISABLE_SAFE_ARRAY
-# -D SAFETY_DEBUG
 
 extraParams.hxml
