@@ -15,15 +15,15 @@ class TestSafeApi extends BaseCase {
 
 	public function testPassingNullToNotNullableArg_throwsNullPointerException() {
 		Assert.raises(
-			() -> strArg((null:Unsafe<String>)),
+			function() strArg((null:Unsafe<String>)),
 			IllegalArgumentException
 		);
 	}
 
-	#if !static
+	#if !(cross || flash || cpp || cs || hl || java)
 	static public function testPassingNull_toBasicType_throwsNullPointerException() {
 		Assert.raises(
-			() -> intArg((null:Unsafe<Int>)),
+			function() intArg((null:Unsafe<Int>)),
 			IllegalArgumentException
 		);
 	}
@@ -36,7 +36,7 @@ class TestSafeApi extends BaseCase {
 	//this test is under `#if !static` because `noTypeArg()` has Int argument, and `null` is not allowed for `Int` on static targets.
 	public function testPassingNullToNoTypeArg_throwsNullPointerException() {
 		Assert.raises(
-			() -> noTypeArg((null:Unsafe<Dynamic>)),
+			function() noTypeArg((null:Unsafe<Dynamic>)),
 			IllegalArgumentException
 		);
 	}

@@ -14,7 +14,7 @@ class TestSafetyExtensions extends BaseCase {
 
 	public function testSure() {
 		var s:Null<String> = null;
-		Assert.raises(() -> s.sure(), safety.NullPointerException);
+		Assert.raises(function() s.sure(), safety.NullPointerException);
 		s = 'hello';
 		Assert.equals('hello', s.sure());
 	}
@@ -27,24 +27,24 @@ class TestSafetyExtensions extends BaseCase {
 
 	public function testLet() {
 		var s:Null<String> = null;
-		var result = s.let(_ -> {
+		var result = s.let(function(_) {
 			Assert.fail();
-			'wrong';
+			return 'wrong';
 		});
 		Assert.isTrue(null == result);
 
 		s = 'hello';
-		result = s.let(h -> '$h, world');
+		result = s.let(function(h) return '$h, world');
 		Assert.isTrue('hello, world' == result);
 	}
 
 	public function testRun() {
 		var s:Null<String> = null;
-		s.run(_ -> Assert.fail());
+		s.run(function(_) Assert.fail());
 
 		s = 'hello';
 		var invoked = false;
-		s.run(h -> {
+		s.run(function(h) {
 			invoked = true;
 			Assert.equals('hello', h);
 		});
@@ -53,12 +53,12 @@ class TestSafetyExtensions extends BaseCase {
 
 	public function testApply() {
 		var s:Null<String> = null;
-		var result = s.apply(_ -> Assert.fail());
+		var result = s.apply(function(_) Assert.fail());
 		Assert.isTrue(result == s);
 
 		s = 'hello';
 		var invoked = false;
-		result = s.apply(h -> {
+		result = s.apply(function(h) {
 			invoked = true;
 			Assert.isTrue(s == h);
 		});

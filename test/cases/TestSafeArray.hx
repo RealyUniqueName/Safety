@@ -7,14 +7,14 @@ class TestSafeArray extends BaseCase {
 
 	public function testRead_outOfBounds_shouldThrow() {
 		var a:SafeArray<Int> = [];
-		Assert.raises(() -> a[0], OutOfBoundsException);
-		Assert.raises(() -> a[-1], OutOfBoundsException);
+		Assert.raises(function() a[0], OutOfBoundsException);
+		Assert.raises(function() a[-1], OutOfBoundsException);
 	}
 
 	public function testWrite_outOfBounds_shouldThrow() {
 		var a:SafeArray<Int> = [];
-		Assert.raises(() -> a[10] = 2, OutOfBoundsException);
-		Assert.raises(() -> a[-1] = 2, OutOfBoundsException);
+		Assert.raises(function() a[10] = 2, OutOfBoundsException);
+		Assert.raises(function() a[-1] = 2, OutOfBoundsException);
 	}
 
 	public function testWrite_atLength_shouldPass() {
@@ -26,7 +26,7 @@ class TestSafeArray extends BaseCase {
 	public function testArrayDeclaration_automaticallyConvertedToSafeArray() {
 		var a = ["hello", "wtf"];
 		//If `a` was automatically typed as `SafeArray` out-of-bounds reading will throw
-		Assert.raises(() -> a[10], OutOfBoundsException);
+		Assert.raises(function() a[10], OutOfBoundsException);
 	}
 
 	public function testArrayDeclaration_inSwitchAndCase_shouldNotBeConverted() {

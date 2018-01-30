@@ -3,7 +3,6 @@ import haxe.macro.PositionTools;
 import haxe.macro.Context;
 import haxe.macro.Expr;
 import haxe.io.Path;
-import eval.vm.Context in EvalContext;
 import safety.macro.SafeAst;
 import safety.macro.PluginLoadingException;
 
@@ -50,6 +49,10 @@ class Safety {
 		if(Context.defined('display')) {
 			return;
 		}
+
+		#if (haxe_ver < '4.0.0')
+		return;
+		#end
 
 		try {
 			plugin.addPath(path);
@@ -115,13 +118,17 @@ class Safety {
 	static public var plugin(get,never):SafetyPluginApi;
 	static var _plugin:SafetyPluginApi;
 	static function get_plugin():SafetyPluginApi {
+		#if (haxe_ver < '4.0.0')
+		throw new PluginLoadingException('Haxe >= 4.0.0 is required to load Safety plugin.');
+		#else
 		if(_plugin == null) {
 			try {
-				_plugin = EvalContext.loadPlugin(getPluginPath());
+				_plugin = eval.vm.Context.loadPlugin(getPluginPath());
 			} catch(e:Dynamic) {
 				throw new PluginLoadingException(Std.string(e));
 			}
 		}
+		#end
 		return _plugin;
 	}
 

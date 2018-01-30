@@ -28,6 +28,8 @@ typedef AnonAsStruct = {
 	?optional:String
 }
 
+#if (haxe_ver >= '4.0.0')
+
 @:build(Validator.checkFields())
 private class Test {
 	public var field:Null<String>;
@@ -550,3 +552,4 @@ private class Test {
 	// }
 }
 
+#end
