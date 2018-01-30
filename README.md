@@ -1,6 +1,6 @@
 # Safety [![Build Status](https://travis-ci.org/RealyUniqueName/Safety.svg?branch=master)](https://travis-ci.org/RealyUniqueName/Safety)
 
-This library implements a few features for writing Haxe code which generates less null pointer errors. These features: are safe navigation operator, safe arrays, safe api (automatic checks of method arguments for `null`) and null safety.
+This library implements a few features for writing Haxe code which generates less null pointer errors. These features are: safe navigation operator, safe arrays, safe api (automatic checks of method arguments for `null`) and null safety.
 
 Most features are compatible with Haxe 3.4 except null safety.
 
@@ -36,7 +36,7 @@ Add `-lib safety` to your hxml file.
 Use following compiler arguments:
 
 * `--macro Safety.enable(dotPath, enableAdditionalFeatures)` (requires Haxe 4.0.0-preview.2 or later) - Enable null safety for the specified path. E.g. `--macro Safety.enable('my.pack')` to enable it for all the types in `my.pack` and in subpackages. Or `--macro Safety.enable('my.pack.MyClass')` to enable it for `my.pack.MyClass` only. Additional features are safe navigation operator, safe api and SafeArray. Each feature can be enabled separately if you pass `false` to `enableAdditionalFeatures`. The default value is `true`. More on the features below.
-* `--macro Safety.safeNavigation(dotPath, recursive)` - Enables [safe navigation operator](https://en.wikipedia.org/wiki/Safe_navigation_operator) `!.` in the specified path. if `recursive` is `true` (it is by default), then `!.` operator is also enabled for subpackages in `dotPath`.
+* `--macro Safety.safeNavigation(dotPath, recursive)` - Enables [safe navigation operator](https://en.wikipedia.org/wiki/Safe_navigation_operator) `!.` in the specified path. If `recursive` is `true` (it is by default), then `!.` operator is also enabled for subpackages in `dotPath`.
 * `--macro Safety.safeArray(dotPath, recursive)` - Makes all array declarations to be typed as `SafeArray`. See [feature description](#safe-array) for details.
 * `--macro Safety.safeApi(dotPath, recursive)` - Adds runtime checking for not-nullable arguments of public methods in the specified path. If `null` is passed to such an argument, then `safety.IllegalArgumentException` is thrown. [Details](#safe-api)
 * `-D SAFETY_SILENT` - do not abort compilation on safety errors. You can handle safety errors manually at macro time in `Safety.plugin.onComplete(() -> trace(Safety.plugin.getErrors()))`
@@ -48,7 +48,7 @@ You can pass empty string `""` as any `dotPath` to apply a feature to the whole 
 
 ## Features
 
-### Compile time safety checking
+### Compile time null safety
 
 * Safety makes sure you will not pass nullable values to the places which are not explicitly declared with `Null<SomeType>` (assignments, return statements, array access etc.);
 ```haxe
