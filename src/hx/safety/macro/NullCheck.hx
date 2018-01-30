@@ -8,7 +8,7 @@ abstract GenericCheck<T>(Null<T>) {
 	public inline function new(value:T, type:String, method:String, argument:String) {
 		this = value;
 		if(this == null) {
-			throw new NullPointerException('Null is not allowed for argument $argument in $type.$method()');
+			throw new IllegalArgumentException('Null is not allowed for argument $argument in $type.$method()');
 		}
 	}
 }

@@ -1,7 +1,7 @@
 package cases;
 
 import utest.Assert;
-import safety.NullPointerException;
+import safety.IllegalArgumentException;
 
 using Safety;
 
@@ -16,7 +16,7 @@ class TestSafeApi extends BaseCase {
 	public function testPassingNullToNotNullableArg_throwsNullPointerException() {
 		Assert.raises(
 			() -> strArg((null:Unsafe<String>)),
-			NullPointerException
+			IllegalArgumentException
 		);
 	}
 
@@ -24,7 +24,7 @@ class TestSafeApi extends BaseCase {
 	static public function testPassingNull_toBasicType_throwsNullPointerException() {
 		Assert.raises(
 			() -> intArg((null:Unsafe<Int>)),
-			NullPointerException
+			IllegalArgumentException
 		);
 	}
 
@@ -33,11 +33,11 @@ class TestSafeApi extends BaseCase {
 		Assert.pass();
 	}
 
-	//this test is under `#if !static` because `noTypeArg()` has Int argument
+	//this test is under `#if !static` because `noTypeArg()` has Int argument, and `null` is not allowed for `Int` on static targets.
 	public function testPassingNullToNoTypeArg_throwsNullPointerException() {
 		Assert.raises(
 			() -> noTypeArg((null:Unsafe<Dynamic>)),
-			NullPointerException
+			IllegalArgumentException
 		);
 	}
 	#end
