@@ -3,27 +3,62 @@ import haxe.macro.PositionTools;
 import haxe.macro.Context;
 import haxe.macro.Expr;
 import haxe.io.Path;
+import safety.macro.SafetyPluginApi;
 import safety.macro.SafeAst;
 import safety.macro.PluginLoadingException;
 
 using haxe.io.Path;
 using sys.FileSystem;
-
-typedef SafetyPluginApi = {
-	/** This method should be executed at initialization macro time */
-	function run():Void;
-	/** Check specified dot-path for null safety. */
-	function addPath(path:String):Void;
-	/** Returns a list of all errors found during safety checks */
-	function getErrors():Array<{msg:String, pos:Position}>;
-	/** Returns a list of all warnings found during safety checks */
-	function getWarnings():Array<{msg:String, pos:Position}>;
-	/** Calls `callback` when all safety checks are finished */
-	function onComplete(callback:Void->Void):Void;
-}
 #end
 
 class Safety {
+
+	/**
+	 *  Returns `value` if it is not `null`. Otherwise returns `defaultValue`.
+	 */
+	static public inline function or<T>(value:Null<T>, defaultValue:T):T {
+		return value == null ? defaultValue : (value:Unsafe<T>);
+	}
+
+	/**
+	 *  Returns `value` if it is not `null`. Otherwise throws an exception.
+	 *  @throws NullPointerException if `value` is `null`.
+	 */
+	static public inline function sure<T>(value:Null<T>):T {
+		return value == null ? throw new safety.NullPointerException('Null pointer in .sure() call') : (value:Unsafe<T>);
+	}
+
+	/**
+	 *  Just returns `value` without any checks, but typed as not-nullable. Use at your own risk.
+	 */
+	static public inline function unsafe<T>(value:Null<T>):T {
+		return (value:Unsafe<T>);
+	}
+
+	/**
+	 *  Applies `callback` to `value` and returns the result if `value` is not `null`.
+	 *  Returns `null` otherwise.
+	 */
+	static public inline function let<T,V>(value:Null<T>, callback:T->V):Null<V> {
+		return value == null ? null : callback((value:Unsafe<T>));
+	}
+
+	/**
+	 *  Passes `value` to `callback` if `value` is not null.
+	 */
+	static public inline function run<T>(value:Null<T>, callback:T->Void) {
+		if(value != null) callback((value:Unsafe<T>));
+	}
+
+	/**
+	 *  Applies `callback` to `value` if `value` is not `null`.
+	 *  Returns `value`.
+	 */
+	static public inline function apply<T>(value:Null<T>, callback:T->Void):Null<T> {
+		if(value != null) callback((value:Unsafe<T>));
+		return value;
+	}
+
 	/**
 	 *  Prints `true` at compile time if provided expression can not be evaluated to `null` at run time. Prints `false` otherwise.
 	 *  Always prints `false` if invoked outside of a path passed to `Safety.enable()`
@@ -157,53 +192,6 @@ class Safety {
 			trace('Failed to load plugin: ${e.message}');
 			#end
 		}
-	}
-#else
-
-	/**
-	 *  Returns `value` if it is not `null`. Otherwise returns `defaultValue`.
-	 */
-	static public inline function or<T>(value:Null<T>, defaultValue:T):T {
-		return value == null ? defaultValue : (value:Unsafe<T>);
-	}
-
-	/**
-	 *  Returns `value` if it is not `null`. Otherwise throws an exception.
-	 *  @throws NullPointerException if `value` is `null`.
-	 */
-	static public inline function sure<T>(value:Null<T>):T {
-		return value == null ? throw new safety.NullPointerException('Null pointer in .sure() call') : (value:Unsafe<T>);
-	}
-
-	/**
-	 *  Just returns `value` without any checks, but typed as not-nullable. Use at your own risk.
-	 */
-	static public inline function unsafe<T>(value:Null<T>):T {
-		return (value:Unsafe<T>);
-	}
-
-	/**
-	 *  Applies `callback` to `value` and returns the result if `value` is not `null`.
-	 *  Returns `null` otherwise.
-	 */
-	static public inline function let<T,V>(value:Null<T>, callback:T->V):Null<V> {
-		return value == null ? null : callback((value:Unsafe<T>));
-	}
-
-	/**
-	 *  Passes `value` to `callback` if `value` is not null.
-	 */
-	static public inline function run<T>(value:Null<T>, callback:T->Void) {
-		if(value != null) callback((value:Unsafe<T>));
-	}
-
-	/**
-	 *  Applies `callback` to `value` if `value` is not `null`.
-	 *  Returns `value`.
-	 */
-	static public inline function apply<T>(value:Null<T>, callback:T->Void):Null<T> {
-		if(value != null) callback((value:Unsafe<T>));
-		return value;
 	}
 #end
 }

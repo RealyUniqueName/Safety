@@ -103,7 +103,9 @@ trace(obj!.field!.length); //5
 
 ### Safe array
 
-`SafeArray<T>` (abstract over `Array<T>`) behaves exactly like `Array<T>` except it prevents out-of-bounds reading/writing (throws `safety.OutOfBoundsException`). See [Limitations](#limitations) to find out why you need it.
+`SafeArray<T>` (abstract over `Array<T>`) behaves exactly like `Array<T>` except it prevents out-of-bounds reading/writing (throws `safety.OutOfBoundsException`). Writing at an index of array's length is allowed.
+
+See [Limitations](#limitations) to find out why you need it.
 
 If `--macro Safety.safeArray(my.pack)` is in effect, then all array declarations become `SafeArray`:
 ```haxe
@@ -180,8 +182,6 @@ macro static public function isSafe(expr:Expr):ExprOf<Void>
 
 ## Limitations
 
-* Safe navigation operator `!.` does not provide code completion.
-* Haxe was not designed with null safety in mind, so it's always possible `null` will come to your code from 3rd-party code or even from std lib.
 * Out-of-bounds array read returns `null`, but Haxe types it without `Null<>`. ([PR to the compiler to fix this issue](https://github.com/HaxeFoundation/haxe/pull/6825))
 ```haxe
 var a:Array<String> = ["hello"];
@@ -197,6 +197,8 @@ trace(a); //["hello", null, "world"]
 var s:String = a[1]; //Safety cannot check this
 trace(s); //null
 ```
+* Safe navigation operator `!.` does not provide code completion.
+* Haxe was not designed with null safety in mind, so it's always possible `null` will come to your code from 3rd-party code or even from std lib.
 * Nullable fields and properties are not considered null-safe even after checking against `null`. Use safety extensions instead:
 ```haxe
 using Safety;
