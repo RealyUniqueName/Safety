@@ -169,6 +169,20 @@ class SafeAst {
 	static function transform(e:Expr):Expr {
 
 		if(isInSafeNavigation) switch(e) {
+			case macro $target!.$field($a{args}):
+				transformed = true;
+				e = macro @:pos(e.pos) {
+					var _v_ = $target;
+					_v_ == null ? null : (_v_.$field:Unsafe<safety.macro.Monomorph<0>>)($a{args});
+				};
+				return e.map(transform);
+			case macro $target!.$field[$index]:
+				transformed = true;
+				e = macro @:pos(e.pos) {
+					var _v_ = $target;
+					_v_ == null ? null : (_v_.$field:Unsafe<safety.macro.Monomorph<0>>)[$index];
+				};
+				return e.map(transform);
 			case macro $target!.$field:
 				transformed = true;
 				e = macro @:pos(e.pos) {

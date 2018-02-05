@@ -19,4 +19,14 @@ class TestSafeNavigation extends BaseCase {
 		var o:Dummy = { nullable:value };
 		Assert.isTrue(value.length == o!.nullable!.length.unsafe());
 	}
+
+	public function testSafeCall_onNullValue_returnsNull() {
+		var o:Null<Dummy> = null;
+		Assert.isTrue(null == o!.nullable!.toUpperCase());
+	}
+
+	public function testSafeArrayAccess_onNullValue_returnsNull() {
+		var o:Null<{array:Array<String>}> = null;
+		Assert.isTrue(null == o!.array[0]);
+	}
 }
