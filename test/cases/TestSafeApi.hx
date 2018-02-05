@@ -20,7 +20,7 @@ class TestSafeApi extends BaseCase {
 		);
 	}
 
-	#if !(cross || flash || cpp || cs || hl || java)
+#if !(cross || flash || cpp || cs || hl || java)
 	static public function testPassingNull_toBasicType_throwsNullPointerException() {
 		Assert.raises(
 			function() intArg((null:Unsafe<Int>)),
@@ -40,7 +40,7 @@ class TestSafeApi extends BaseCase {
 			IllegalArgumentException
 		);
 	}
-	#end
+#end
 
 	static public function testPassingNull_toNullType_doesNotThrow() {
 		nullArg(null);

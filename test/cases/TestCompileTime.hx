@@ -37,6 +37,7 @@ private class Test {
 	@:shouldFail var notInitializedField:Int;
 	@:shouldFail var notInitializedProperty(default,null):Float;
 	@:shouldFail @:isVar var notInitializedIsVar(get,set):String;
+	@:shouldFail var initializedWithNullable:String = null;
 	function get_notInitializedIsVar() return notInitializedIsVar;
 	function set_notInitializedIsVar(v) return notInitializedIsVar = v;
 

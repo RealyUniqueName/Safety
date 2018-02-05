@@ -999,9 +999,11 @@ class expr_checker report =
 				| _ -> is_nullable_type e.etype
 		(**
 			Check if `expr` can be passed to a place where `to_type` is expected.
+			This method has side effect: it logs an error if `expr` has a type parameter incompatible with the type parameter of `to_type`.
+			E.g.: `Array<Null<String>>` vs `Array<String>` returns `true`, but also adds a compilation error.
 		*)
-		method private can_pass_expr expr to_type p =
-			if (is_special_type_unsafe expr.etype) or (is_special_type_unsafe to_type) then
+		method can_pass_expr expr to_type p =
+			if (is_special_type_unsafe expr.etype) || (is_special_type_unsafe to_type) then
 				true
 			else if self#is_nullable_expr expr && not (is_nullable_type to_type) then
 				false
@@ -1352,7 +1354,7 @@ class class_checker cls report =
 										("Field \"" ^ field.cf_name ^ "\" is not nullable thus should have an initial value.")
 										field.cf_pos
 							| Some e ->
-								if checker#is_nullable_expr e then
+								if not (checker#can_pass_expr e field.cf_type e.epos) then
 									checker#error ("Cannot set nullable initial value for not-nullable field \"" ^ field.cf_name ^ "\".") field.cf_pos
 			in
 			List.iter (check_field false) cls.cl_ordered_fields;
@@ -1451,7 +1453,16 @@ class plugin =
 					if not (raw_defined com "SAFETY_SILENT") then
 						List.iter (fun err -> com.error err.sm_msg err.sm_pos) (List.rev report.sr_errors);
 					t();
-					List.iter (fun callback -> ignore (callback())) complete_callbacks
+
+					List.iter
+						(fun callback ->
+							try
+								ignore (callback())
+							with
+								| Abort -> ()
+								| e -> raise e
+						)
+						complete_callbacks
 				)
 			end;
 			(* This is because of vfun0 should return something *)
