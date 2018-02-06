@@ -4,8 +4,8 @@
 	"license"      : "MIT",
 	"tags"         : ["null", "safety", "npe"],
 	"description"  : "Null safety for Haxe.",
-	"version"      : "0.1.0",
-	"releasenote"  : "Initial release.",
+	"version"      : "0.1.1",
+	"releasenote"  : "Bugfixes.",
 	"classPath"    : "src/hx",
 	"contributors" : ["RealyUniqueName"],
 	"dependencies" : {
