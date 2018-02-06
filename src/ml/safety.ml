@@ -1044,8 +1044,7 @@ class expr_checker report =
 				| TObjectDecl fields -> List.iter (fun (_, e) -> self#check_expr e) fields
 				| TArrayDecl items -> self#check_array_decl items e.etype e.epos
 				| TCall (callee, args) -> self#check_call callee args
-				| TNew ({ cl_constructor = Some ctor }, _, args) -> self#check_constructor ctor args e.epos
-				| TNew (_, _, args) -> List.iter self#check_expr args
+				| TNew (cls, params, args) -> self#check_new cls params args e.epos
 				| TUnop (_, _, expr) -> self#check_unop expr e.epos
 				| TFunction fn -> self#check_function fn
 				| TVar (v, init_expr) -> self#check_var v init_expr e.epos
@@ -1269,16 +1268,23 @@ class expr_checker report =
 		(**
 			Check constructor invocation: dont' pass nulable values to not-nullable arguments
 		*)
-		method private check_constructor ctor args p =
-			let rec traverse t =
-				match follow t with
-					| TFun (types, _) -> self#check_args args types
-					(* | TLazy l -> traverse (lazy_type l)
-					| TMono r -> (match !r) *)
-					| _ -> fail ~msg:"Unexpected constructor type." p __POS__
+		method private check_new cls params args p =
+			let ctor =
+				try
+					Some (get_constructor (fun ctor -> apply_params cls.cl_params params ctor.cf_type) cls)
+				with
+					| Not_found -> None
 			in
-			traverse ctor.cf_type
-
+			match ctor with
+				| None ->
+					List.iter self#check_expr args
+				| Some (ctor_type, _) ->
+					let rec traverse t =
+						match follow t with
+							| TFun (types, _) -> self#check_args args types
+							| _ -> fail ~msg:"Unexpected constructor type." p __POS__
+					in
+					traverse ctor_type
 		(**
 			Check calls: don't call a nullable value, dont' pass nulable values to not-nullable arguments
 		*)
@@ -1286,7 +1292,6 @@ class expr_checker report =
 			if self#is_nullable_expr callee then
 				self#error "Cannot call a nullable value." callee.epos;
 			self#check_expr callee;
-			List.iter self#check_expr args;
 			match callee.eexpr with
 				(* Handle `Safety.isSafe(localVar)` *)
 				| TField (_, FStatic ({ cl_path = ([], "Safety") }, { cf_name = "_isSafe"})) ->
@@ -1305,7 +1310,8 @@ class expr_checker report =
 								| _ -> ""
 							in
 							self#check_args ~callee:fn_name args types
-						| _ -> ()
+						| _ ->
+							List.iter self#check_expr args
 		(**
 			Check if specified expressions can be passed to a call which expects `types`.
 		*)

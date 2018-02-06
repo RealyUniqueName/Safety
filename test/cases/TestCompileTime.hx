@@ -20,6 +20,13 @@ abstract AWrap<T>(T) from T to T {
 	}
 }
 
+class Generic<T> {
+	var value:T;
+	public function new(value:T) {
+		this.value = value;
+	}
+}
+
 typedef AnonAsClass = {
 	@:optional var optional:String;
 }
@@ -114,13 +121,24 @@ private class Test {
 		var fn = function(a:String) {}
 		var v:Null<String> = 'hello';
 		shouldFail(fn(v));
-		shouldFail(new Test(v));
 	}
 
 	static function call_nullableValueToOptionalArgument_shouldPass() {
 		var fn = function(?a:Int) {}
 		var v:Null<Int> = 1;
 		fn(v);
+	}
+
+	static public function new_nullableValueToNotNullableArgument_shouldFail(?v:String) {
+		shouldFail(new Test(v));
+	}
+
+	static public function new_nullableValueToNotNullableGenericArg_shouldFail(?n:String) {
+		shouldFail(new Generic<String>(n));
+	}
+
+	static public function new_nullableValueToNullableGenericArg_shouldPass(?n:String) {
+		new Generic(n);
 	}
 
 	static function varDecl_assignNullableValueToNotNullableVar_shouldFail() {

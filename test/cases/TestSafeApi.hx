@@ -3,8 +3,6 @@ package cases;
 import utest.Assert;
 import safety.IllegalArgumentException;
 
-using Safety;
-
 class TestSafeApi extends BaseCase {
 	static public function strArg(str:String) {}
 	static public function intArg(int:Int) {}

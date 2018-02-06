@@ -57,7 +57,7 @@ class NullCheckBuilder {
 
 	static function getNullability(type:Type, depth:Int = 0):Nullability {
 		//guard against infinite monomorph resolution
-		if(depth > 100) {
+		if(depth > 10) {
 			return Implicit;
 		}
 		return
