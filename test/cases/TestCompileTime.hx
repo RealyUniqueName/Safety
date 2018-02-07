@@ -473,10 +473,9 @@ private class Test {
 		shouldFail(cast(s, String));
 	}
 
-	static function cast_nullableExprToNullableType_shouldPass() {
-		var s:Null<String> = 'hello';
-		function dummy(?a:String) {}
-		dummy(cast s);
+	static function untypedCast_shouldPass() {
+		var n:Null<String> = 'hello';
+		var s:String = cast n;
 	}
 
 	static function enum_switchOnNullableEnum_shouldFail(e:Null<DummyEnum>) {

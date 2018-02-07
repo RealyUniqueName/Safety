@@ -1147,9 +1147,17 @@ class expr_checker report =
 			Don't cast nullable expressions to not-nullable types
 		*)
 		method private check_cast expr to_type p =
-			self#check_expr expr;
-			if not (self#can_pass_expr expr to_type p) then
-				self#error "Cannot cast nullable value to not nullable type." p
+			(* Don't check `(expr:Unsafe<T>)` *)
+			if not (is_special_type_unsafe to_type) then begin
+				self#check_expr expr;
+				match to_type with
+					(* untyped cast *)
+					| TMono _ -> ()
+					(* typed cast and type check *)
+					| _ ->
+						if not (self#can_pass_expr expr to_type p) then
+							self#error "Cannot cast nullable value to not nullable type." p
+			end
 		(**
 			Check safety in a function
 		*)
