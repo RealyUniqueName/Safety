@@ -4,8 +4,8 @@
 	"license"      : "MIT",
 	"tags"         : ["null", "safety", "npe"],
 	"description"  : "Null safety for Haxe.",
-	"version"      : "0.1.1",
-	"releasenote"  : "Bugfixes.",
+	"version"      : "0.1.2",
+	"releasenote"  : "Do not check `expr` in  `(expr:Unsafe<T>)` for safety; Do not check untyped cast.",
 	"classPath"    : "src/hx",
 	"contributors" : ["RealyUniqueName"],
 	"dependencies" : {
