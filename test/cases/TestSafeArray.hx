@@ -17,7 +17,7 @@ class TestSafeArray extends BaseCase {
 		Assert.raises(function() a[-1] = 2, OutOfBoundsException);
 	}
 
-#if !php
+#if (!php || haxe_ver < '4.0.0')
 	/**
 	 *  TODO: enable this test for PHP after Haxe 4.0.0-preview.4 or final 4.0.0 release
 	 *  @see //see https://github.com/HaxeFoundation/haxe/issues/6874
