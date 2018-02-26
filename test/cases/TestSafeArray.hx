@@ -17,11 +17,17 @@ class TestSafeArray extends BaseCase {
 		Assert.raises(function() a[-1] = 2, OutOfBoundsException);
 	}
 
+#if !php
+	/**
+	 *  TODO: enable this test for PHP after Haxe 4.0.0-preview.4 or final 4.0.0 release
+	 *  @see //see https://github.com/HaxeFoundation/haxe/issues/6874
+	 */
 	public function testWrite_atLength_shouldPass() {
 		var a:SafeArray<Int> = [];
 		a[a.length] = 5;
 		Assert.same([5], a);
 	}
+#end
 
 	public function testArrayDeclaration_automaticallyConvertedToSafeArray() {
 		var a = ["hello", "wtf"];
