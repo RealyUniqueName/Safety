@@ -86,7 +86,7 @@ class Safety {
 		}
 
 		#if (haxe_ver < '4.0.0')
-		Context.warning('Null safety is disabled: at least Haxe 4.0.0-preview.2 is required.', Context.currentPos());
+		Context.warning('Null safety is disabled: at least Haxe 4.0.0-preview.3 is required.', Context.currentPos());
 		return;
 		#end
 

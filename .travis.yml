@@ -15,9 +15,9 @@ install:
   - if [ "$TRAVIS_HAXE_VERSION" == "development" ]; then
       rm -rf ${HOME}/haxe/*;
       if [ `uname` = "Linux" ]; then
-        curl -s -L --retry 3 'http://hxbuilds.s3-website-us-east-1.amazonaws.com/builds/haxe/linux64/haxe_2018-01-23_development_ceeba64.tar.gz' | tar -C ${HOME}/haxe -x -z --strip-components=1 -f -;
+        curl -s -L --retry 3 'https://github.com/HaxeFoundation/haxe/releases/download/4.0.0-preview.3/haxe-4.0.0-preview.3-linux64.tar.gz' | tar -C ${HOME}/haxe -x -z --strip-components=1 -f -;
       else
-        curl -s -L --retry 3 'http://hxbuilds.s3-website-us-east-1.amazonaws.com/builds/haxe/mac/haxe_2018-01-25_development_ceeba64.tar.gz' | tar -C ${HOME}/haxe -x -z --strip-components=1 -f -;
+        curl -s -L --retry 3 'https://github.com/HaxeFoundation/haxe/releases/download/4.0.0-preview.3/haxe-4.0.0-preview.3-osx.tar.gz' | tar -C ${HOME}/haxe -x -z --strip-components=1 -f -;
       fi;
       haxelib setup ${HOME}/haxe/lib;
     fi;
