@@ -88,6 +88,43 @@ function doStuff(a:Null<String>) {
 }
 ```
 
+### Excluding code from null safety
+
+These are the ways to disable safety in certain situations. You should avoid such cases where possible. Use at your own risk.
+
+* To skip null safety checking for a method, field or a whole class, add `@:safety(unsafe)` meta to that field or class:
+```haxe
+class Dummy {
+    /** no initial value is ok, because this field is not checked */
+    @:safety(unsafe) var unsafeField:String;
+
+    @:safety(unsafe) function unsafeMethod() {
+        var s:String = null; //ok
+    }
+}
+
+@:safety(unsafe)
+class FreeZone {
+    static function method() {
+        var s:String = null; //ok
+    }
+}
+```
+* `Unsafe<T>` is a special type which is an alias for `T`. Nullable values will be passed to/from this type without any checks.
+```haxe
+var u:Unsafe<String> = null; // ok
+var s:String = u; // ok
+```
+* To skip null safety checking for an expression, wrap it in a typecheck with the special `Unsafe<T>` type:
+```haxe
+var s:String;
+(s = null : Unsafe<String>); //ok
+```
+* Untyped cast is not checked for null safety
+```haxe
+var s:String = cast null; // ok
+```
+
 ### Safe navigation operator
 
 Adds safe navigation operator `!.` to Haxe syntax. Compiler argument to enable it: `--macro Safety.safeNavigation(my.pack)`

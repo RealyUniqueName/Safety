@@ -684,9 +684,18 @@ let process_condition condition (is_nullable_expr:texpr->bool) callback =
 	(!nulls, !not_nulls)
 
 (**
+	Check if metadata contains @:safety(unsafe) meta
+**)
+let rec contains_unsafe_meta metadata =
+	match metadata with
+		| [] -> false
+		| (Meta.Custom ":safety", [(EConst (Ident "unsafe"), _)], _) :: _  -> true
+		| _ :: rest -> contains_unsafe_meta rest
+
+(**
 	Check if specified `path` is mentioned in `-D SAFETY=here`
 *)
-let need_check com check_paths type_path =
+let need_check_path com check_paths type_path =
 	let starts_with (haystack:string) (needle:string) :bool =
 		(String.length haystack >= String.length needle)
 		&& (needle = String.sub haystack 0 (String.length needle))
@@ -1348,7 +1357,8 @@ class class_checker cls report =
 			if (not cls.cl_extern) && (not cls.cl_interface) then
 				self#check_var_fields;
 			let check_field f =
-				Option.may checker#check_root_expr f.cf_expr
+				if not (contains_unsafe_meta f.cf_meta) then
+					Option.may checker#check_root_expr f.cf_expr
 			in
 			Option.may checker#check_root_expr cls.cl_init;
 			Option.may (fun field -> Option.may checker#check_root_expr field.cf_expr) cls.cl_constructor;
@@ -1360,7 +1370,7 @@ class class_checker cls report =
 		method check_var_fields =
 			let check_field is_static field =
 				if should_be_initialized field then
-					if not (is_nullable_type field.cf_type) then
+					if not (is_nullable_type field.cf_type) && not (contains_unsafe_meta field.cf_meta) then
 						match field.cf_expr with
 							| None ->
 								if is_static then
@@ -1381,7 +1391,7 @@ class class_checker cls report =
 			let fields_to_initialize = Hashtbl.create 20 in
 			List.iter
 				(fun f ->
-					if not (is_nullable_type f.cf_type) then
+					if not (is_nullable_type f.cf_type) && not (contains_unsafe_meta f.cf_meta) then
 						match f.cf_expr with
 							| Some _ -> ()
 							| None -> Hashtbl.add fields_to_initialize f.cf_name f
@@ -1424,17 +1434,18 @@ class class_checker cls report =
 				);
 				init_list
 			in
-			match cls.cl_constructor with
+			(match cls.cl_constructor with
 				| Some { cf_expr = Some { eexpr = TFunction { tf_expr = e } } } ->
 					ignore (traverse fields_to_initialize e);
-					Hashtbl.iter
-						(fun name field ->
-							checker#error
-								("Field \"" ^ name ^ "\" is not nullable thus should have an initial value or should be initialized in constructor.")
-								field.cf_pos
-						)
-						fields_to_initialize
 				| _ -> ()
+			);
+			Hashtbl.iter
+				(fun name field ->
+					checker#error
+						("Field \"" ^ name ^ "\" is not nullable thus should have an initial value or should be initialized in constructor.")
+						field.cf_pos
+				)
+				fields_to_initialize
 	end
 
 class plugin =
@@ -1457,7 +1468,7 @@ class plugin =
 							| TEnumDecl enm -> ()
 							| TTypeDecl typedef -> ()
 							| TAbstractDecl abstr -> ()
-							| TClassDecl cls when not (need_check com check_paths cls.cl_path) -> ()
+							| TClassDecl cls when not (need_check_path com check_paths cls.cl_path) || (contains_unsafe_meta cls.cl_meta) -> ()
 							| TClassDecl cls ->
 								if raw_defined com "SAFETY_DEBUG" then
 									print_endline ("Safety check: " ^ (str_type (TInst (cls, []))));

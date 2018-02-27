@@ -37,6 +37,41 @@ typedef AnonAsStruct = {
 
 #if (haxe_ver >= '4.0.0')
 
+/** Test `@:safety(unsafe)` is respected on fields */
+class UnsafeFields {
+	@:safety(unsafe) var unsafeVar:String = null;
+	@:safety(unsafe) var notInitializedField:String;
+
+	@:safety(unsafe)
+	static function unsafeMethod() {
+		var s:String = null;
+	}
+
+	static function unsafeExpr() {
+		var s:String;
+		(s = null:Unsafe<String>);
+	}
+}
+
+/** Test `@:safety(unsafe)` is respected on a class */
+@:safety(unsafe)
+class UnsafeClass {
+	var uninitializedVar:String;
+
+	public function new() {
+		doStuff(this); //pass this somewhere before all fields are initialized
+	}
+
+	function doStuff(t:UnsafeClass) {}
+}
+
+
+@:build(Validator.checkFields())
+private class TestWithoutConstructor {
+	@:shouldFail var notInitializedField:String;
+}
+
+
 @:build(Validator.checkFields())
 private class Test {
 	public var field:Null<String>;
