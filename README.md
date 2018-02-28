@@ -22,7 +22,7 @@ or the latest development version from github:
 ```
 haxelib git safety https://github.com/RealyUniqueName/Safety.git
 ```
-If you want to use null safety plugin with another OS, arch or another version of Haxe you need to setup desired version of Haxe for development (see [Building Haxe from source](https://haxe.org/documentation/introduction/building-haxe.html)) and then
+Prebuilt plugin binaries are compatible with Haxe 4.0.0-preview.3 and x64 systems Windows, OSX and Linux. If you want to use null safety plugin with another OS, arch or another version of Haxe you need to setup desired version of Haxe for development (see [Building Haxe from source](https://haxe.org/documentation/introduction/building-haxe.html)) and then
 ```
 cd path/to/haxe-source/
 make PLUGIN=path/to/safety/src/ml/safety plugin
