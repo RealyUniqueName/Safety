@@ -693,13 +693,16 @@ let rec contains_unsafe_meta metadata =
 		| _ :: rest -> contains_unsafe_meta rest
 
 (**
-	Check if specified `path` is mentioned in `-D SAFETY=here`
+	Check if `haystack` starts with `needle`
+**)
+let starts_with (haystack:string) (needle:string) :bool =
+	(String.length haystack >= String.length needle)
+	&& (needle = String.sub haystack 0 (String.length needle))
+
+(**
+	Check if specified `path` is mentioned in `--macro Safety.enable(check_path)`
 *)
-let need_check_path com check_paths type_path =
-	let starts_with (haystack:string) (needle:string) :bool =
-		(String.length haystack >= String.length needle)
-		&& (needle = String.sub haystack 0 (String.length needle))
-	in
+let need_check_path check_paths type_path =
 	let class_path =
 		match type_path with
 			| ([], name) -> name
@@ -715,6 +718,25 @@ let need_check_path com check_paths type_path =
 					traverse rest
 	in
 	traverse check_paths
+
+(**
+	Check if specified file defines a module, which should be checked
+**)
+let is_file_in_safety class_paths check_paths file =
+	(* Finds file path relative to classpath *)
+	let rec module_file class_paths =
+		match class_paths with
+			| [] -> file
+			| cp :: _ when starts_with file cp ->
+				let cp_length = String.length cp in
+				String.sub file cp_length ((String.length file) - cp_length)
+			| _ :: rest -> module_file rest
+	in
+	try
+		let path = Path.parse_path (module_file class_paths) in
+		need_check_path check_paths path
+	with
+		| Failure _ -> false
 
 (**
 	Check if specified `field` represents a `var` field which will exist at runtime.
@@ -961,7 +983,7 @@ class local_vars =
 (**
 	This is a base class is used to recursively check typed expressions for null-safety
 *)
-class expr_checker report =
+class expr_checker report is_file_in_safety =
 	object (self)
 		val local_safety = new local_vars
 		val mutable return_types = []
@@ -972,14 +994,14 @@ class expr_checker report =
 		(**
 			Register an error
 		*)
-		method error msg p =
-			if not is_pretending then
+		method error msg (p:Globals.pos) =
+			if not is_pretending && is_file_in_safety p.pfile then
 				report.sr_errors <- { sm_msg = ("Safety: " ^ msg); sm_pos = p; } :: report.sr_errors;
 		(**
 			Register an warning
 		*)
-		method warning msg p =
-			if not is_pretending then
+		method warning msg (p:Globals.pos) =
+			if not is_pretending && is_file_in_safety p.pfile then
 				report.sr_warnings <- { sm_msg = ("Safety: " ^ msg); sm_pos = p; } :: report.sr_warnings;
 		(**
 			Check if `e` is nullable even if the type is reported not-nullable.
@@ -1345,9 +1367,9 @@ class expr_checker report =
 				| _ -> ()
 	end
 
-class class_checker cls report =
+class class_checker cls report is_file_in_safety  =
 	object (self)
-			val checker = new expr_checker report
+			val checker = new expr_checker report is_file_in_safety
 			val mutable initialized_in_constructor = Hashtbl.create 1
 			val mutable constructor_checked = false
 		(**
@@ -1468,11 +1490,11 @@ class plugin =
 							| TEnumDecl enm -> ()
 							| TTypeDecl typedef -> ()
 							| TAbstractDecl abstr -> ()
-							| TClassDecl cls when not (need_check_path com check_paths cls.cl_path) || (contains_unsafe_meta cls.cl_meta) -> ()
+							| TClassDecl cls when not (need_check_path check_paths cls.cl_path) || (contains_unsafe_meta cls.cl_meta) -> ()
 							| TClassDecl cls ->
 								if raw_defined com "SAFETY_DEBUG" then
 									print_endline ("Safety check: " ^ (str_type (TInst (cls, []))));
-								(new class_checker cls report)#check
+								(new class_checker cls report (is_file_in_safety com.class_path check_paths))#check
 					in
 					List.iter traverse types;
 					if not (raw_defined com "SAFETY_SILENT") then

@@ -591,6 +591,10 @@ private class Test {
 		return null;
 	}
 
+	static function anyExpr_withPositionOutOfSafety_shouldPass() {
+		Macro.wrongExprOutOfSafety();
+	}
+
 	/**
 	 *
 	 *  TODO far far future
