@@ -1475,7 +1475,7 @@ class plugin =
 		val report = { sr_errors = []; sr_warnings = [] }
 		val mutable check_paths = []
 		val mutable executed = false
-		val mutable complete_callbacks = []
+		val mutable complete_callbacks : vfunc list = []
 		(**
 			Plugin API: this method should be executed at initialization macro time
 		*)
@@ -1504,7 +1504,7 @@ class plugin =
 					List.iter
 						(fun callback ->
 							try
-								ignore (callback())
+								ignore (callback([]))
 							with
 								| Abort -> ()
 								| e -> raise e
@@ -1525,7 +1525,7 @@ class plugin =
 		*)
 		method on_complete (callback:value) =
 			(match callback with
-				| VFunction (Fun0 fn, _) -> complete_callbacks <- fn :: complete_callbacks
+				| VFunction (fn, _) -> complete_callbacks <- fn :: complete_callbacks
 				| _ -> exc_string "Invalid type of callback. Should be Void->Void"
 			);
 			vnull
