@@ -1,8 +1,8 @@
 package safety.macro;
 
 #if !macro
-@:genericBuild(safety.macro.NullCheck.NullCheckBuilder.build())
-class NullCheck<T> {}
+@:genericBuild(safety.macro.ArgumentNullCheck.NullCheckBuilder.build())
+class ArgumentNullCheck<T> {}
 
 abstract GenericCheck<T>(Null<T>) {
 	public inline function new(value:T, type:String, method:String, argument:String) {
@@ -39,19 +39,19 @@ abstract Nullability(Int) {
 class NullCheckBuilder {
 	macro static public function build():ComplexType {
 		switch(Context.getLocalType()) {
-			case TInst(_.toString() => 'safety.macro.NullCheck', [type]):
+			case TInst(_.toString() => 'safety.macro.ArgumentNullCheck', [type]):
 				switch(getNullability(type)) {
 					case Implicit | Explicit:
 						var complexType = type.toComplexType();
 						if(complexType == null) {
 							complexType = macro:safety.macro.Monomorph<0>;
 						}
-						return macro:safety.macro.NullCheck.GenericCheck<$complexType>;
+						return macro:safety.macro.ArgumentNullCheck.GenericCheck<$complexType>;
 					case _:
-						return macro:safety.macro.NullCheck.NoCheck;
+						return macro:safety.macro.ArgumentNullCheck.NoCheck;
 				}
 			case _:
-				return macro:safety.macro.NullCheck.NoCheck;
+				return macro:safety.macro.ArgumentNullCheck.NoCheck;
 		}
 	}
 
