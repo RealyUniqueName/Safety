@@ -7,13 +7,14 @@ typedef SafetyMessage = {msg:String, pos:Position}
 typedef ExpectedMessage = {symbol:String, pos:Position}
 #end
 
+@:access(Safety.isDisplay)
 class Validator {
 #if macro
 	static var expectedErrors:Array<ExpectedMessage> = [];
 	static var expectedWarnings:Array<ExpectedMessage> = [];
 
 	static public function register() {
-		if(Context.defined('display')) return;
+		if(Safety.isDisplay()) return;
 		try {
 			Safety.plugin.onComplete(validate);
 		} catch(e:PluginLoadingException) {
@@ -104,14 +105,14 @@ class Validator {
 #end
 
 	macro static public function shouldFail(expr:Expr):Expr {
-		if(!Context.defined('display')) {
+		if(!Safety.isDisplay()) {
 			expectedErrors.push({symbol:Context.getLocalMethod(), pos:expr.pos});
 		}
 		return expr;
 	}
 
 	macro static public function shouldWarn(expr:Expr):Expr {
-		if(!Context.defined('display')) {
+		if(!Safety.isDisplay()) {
 			expectedWarnings.push({symbol:Context.getLocalMethod(), pos:expr.pos});
 		}
 		return expr;

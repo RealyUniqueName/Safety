@@ -81,9 +81,7 @@ class Safety {
 			SafeAst.addSafeArray(path, true);
 		}
 
-		if(Context.defined('display')) {
-			return;
-		}
+		if(isDisplay()) return;
 
 		#if (haxe_ver < '4.0.0')
 		Context.warning('Null safety is disabled: at least Haxe 4.0.0-preview.3 is required.', Context.currentPos());
@@ -171,19 +169,16 @@ class Safety {
 	static public function getPluginPath():String {
 		var pos = Context.getPosInfos(PositionTools.here());
 		var srcDir = pos.file.directory().directory();
-		var path = Path.join([srcDir, 'ml', 'safety.cmxs']); //development path
+		var path = Path.join([srcDir, 'ml', 'safety_plugin.cmxs']); //development path
 		//if development binary does not exist, use pre built one
 		if(!path.exists()) {
-			path = Path.join([srcDir, 'bin', Sys.systemName(), 'safety.cmxs']);
+			path = Path.join([srcDir, 'bin', Sys.systemName(), 'safety_plugin.cmxs']);
 		}
 		return path;
 	}
 
 	static public function register() {
-		if(Context.defined('display')) {
-			return;
-		}
-
+		if(isDisplay()) return;
 		try {
 			plugin.run();
 		} catch(e:PluginLoadingException) {
@@ -192,6 +187,16 @@ class Safety {
 			trace('Failed to load plugin: ${e.message}');
 			#end
 		}
+	}
+
+	/**
+	 * Check if compilation is running in display mode.
+	 */
+	static function isDisplay():Bool {
+		#if display
+			return true;
+		#end
+		return Context.defined('display');
 	}
 #end
 }

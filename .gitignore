@@ -1,6 +1,6 @@
 .DS_Store
-src/ml/safety.*
-!src/ml/safety.ml
+src/ml/safety_plugin.*
+!src/ml/safety_plugin.ml
 dump/*
 bin/*
 .haxelib
