@@ -1548,7 +1548,7 @@ class plugin =
 				let obj = encode_obj_s
 					vnull
 					[
-						("msg", vstring (Rope.of_string msg));
+						("msg", encode_rope (Rope.of_string msg));
 						("pos", encode_pos p)
 					]
 				in
