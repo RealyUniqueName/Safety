@@ -323,7 +323,7 @@ private class Test {
 
 	static function checkAgainstNull_checkOutsideLoop_shouldStaySafeInLoop(?a:String) {
 		if(a != null) {
-			for(i in 0...10) {
+			for(i in 0...Std.random(10)) {
 				var s:String = a;
 			}
 		}
@@ -331,7 +331,7 @@ private class Test {
 
 	static function checkAgainstNull_checkInLoop(?a:String) {
 		var s:String;
-		for(i in 0...10) {
+		for(i in 0...Std.random(10)) {
 			shouldFail(s = a);
 			if(a != null) {
 				s = a;
@@ -342,7 +342,7 @@ private class Test {
 
 	static function checkAgainstNull_checkOutsideLoopAndChangedToNullableInside_shouldBeUnsafeFromBeginningOfLoop(?a:String) {
 		if(a != null) {
-			for(i in 0...10) {
+			for(i in 0...Std.random(10)) {
 				shouldFail(var s:String = a);
 				a = null;
 			}
@@ -376,7 +376,7 @@ private class Test {
 	}
 
 	static function checkedAgainstNull_modifiedInClosureInLoop_shouldBecomeNeverSafe(?a:String) {
-		for(i in 0...10) {
+		for(i in 0...Std.random(10)) {
 			trace(_ -> a = null);
 		}
 		if(a != null) {

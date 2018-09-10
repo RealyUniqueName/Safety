@@ -1484,7 +1484,7 @@ class plugin =
 				executed <- true;
 				let com = (get_ctx()).curapi.get_com() in
 				add_typing_filter com (fun types ->
-					let t = Gencommon.timer ["safety plugin"] in
+					let t = Timer.timer ["plugin"; "safety"] in
 					let rec traverse com_type =
 						match com_type with
 							| TEnumDecl enm -> ()
@@ -1500,7 +1500,6 @@ class plugin =
 					if not (raw_defined com "SAFETY_SILENT") then
 						List.iter (fun err -> com.error err.sm_msg err.sm_pos) (List.rev report.sr_errors);
 					t();
-
 					List.iter
 						(fun callback ->
 							try
