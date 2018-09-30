@@ -12,6 +12,9 @@ import safety.OutOfBoundsException;
  */
 @:forward
 abstract SafeArray<T>(Array<T>) from Array<T> to Array<T> {
+	public var length(get,never):Int;
+	inline function get_length() return this.length;
+
 	@:arrayAccess inline function get(index:Int):T {
 		if(index < 0 || index >= this.length) {
 			throw new OutOfBoundsException('Reading out of array bounds. Array length: ${this.length}. Accessed index: $index.');
@@ -25,16 +28,4 @@ abstract SafeArray<T>(Array<T>) from Array<T> to Array<T> {
 		}
 		return this[index] = value;
 	}
-
-	public inline function iterator():SafeArrayIterator<T> {
-		return new SafeArrayIterator(this);
-	}
-}
-
-private class SafeArrayIterator<T> {
-	var array:Array<T>;
-	var current:Int = 0;
-	public inline function new(array:Array<T>) this.array = array;
-	public inline function hasNext() return current < array.length;
-	public inline function next() return array[current++];
 }
