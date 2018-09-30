@@ -192,6 +192,7 @@ class Safety {
 	/**
 	 * Check if compilation is running in display mode.
 	 */
+	@:allow(safety)
 	static function isDisplay():Bool {
 		#if display
 			return true;

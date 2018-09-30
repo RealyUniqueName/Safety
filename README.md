@@ -232,7 +232,6 @@ trace(a); //["hello", null, "world"]
 var s:String = a[1]; //Safety cannot check this
 trace(s); //null
 ```
-* Safe navigation operator `!.` does not provide code completion.
 * Haxe was not designed with null safety in mind, so it's always possible `null` will come to your code from 3rd-party code or even from std lib.
 * Nullable fields and properties are not considered null-safe even after checking against `null`. Use safety extensions instead:
 ```haxe
