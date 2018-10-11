@@ -1,4 +1,5 @@
 #if macro
+import haxe.PosInfos;
 import haxe.macro.PositionTools;
 import haxe.macro.Context;
 import haxe.macro.Expr;
@@ -167,8 +168,7 @@ class Safety {
 	}
 
 	static public function getPluginPath():String {
-		var pos = Context.getPosInfos(PositionTools.here());
-		var srcDir = pos.file.directory().directory();
+		var srcDir = getCurrentPos().fileName.directory().directory();
 		var path = Path.join([srcDir, 'ml', 'safety_plugin.cmxs']); //development path
 		//if development binary does not exist, use pre built one
 		if(!path.exists()) {
@@ -198,6 +198,10 @@ class Safety {
 			return true;
 		#end
 		return Context.defined('display');
+	}
+
+	static function getCurrentPos(?pos:PosInfos):PosInfos {
+		return pos;
 	}
 #end
 }
