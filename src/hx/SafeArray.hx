@@ -11,7 +11,7 @@ import safety.OutOfBoundsException;
  *  ```
  */
 @:forward
-abstract SafeArray<T>(Array<T>) from Array<T> to Array<T> {
+abstract SafeArray<T>(Array<T>) from Array<T> {
 	public var length(get,never):Int;
 	inline function get_length() return this.length;
 
@@ -27,5 +27,9 @@ abstract SafeArray<T>(Array<T>) from Array<T> to Array<T> {
 			throw new OutOfBoundsException('Writing out of array bounds. Array length: ${this.length}. Accessed index: $index.');
 		}
 		return this[index] = value;
+	}
+
+	public inline function stdArray():Array<T> {
+		return this;
 	}
 }

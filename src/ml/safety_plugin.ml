@@ -1544,13 +1544,7 @@ class plugin =
 		method private serialize_messages messages =
 			let arr = Array.make (List.length messages) vnull in
 			let set_item idx msg p =
-				let obj = encode_obj_s
-					vnull
-					[
-						("msg", encode_string msg);
-						("pos", encode_pos p)
-					]
-				in
+				let obj = encode_obj_s [("msg", encode_string msg); ("pos", encode_pos p)] in
 				Array.set arr idx obj
 			in
 			let rec traverse idx errors =

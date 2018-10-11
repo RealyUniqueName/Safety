@@ -147,10 +147,10 @@ If `--macro Safety.safeArray(my.pack)` is in effect, then all array declarations
 var a = ['hello', 'world'];
 $type(a); //SafeArray<String>
 ```
-You can add explicit typing to `Array<T>` (or another type) if you want to disable `SafeArray` for a single expression:
+You can use `stdArray()` method to get a reference to the `Array<T>`:
 ```haxe
-var a = (['hello', 'world']:Array<String>);
-$type(a); //Array<String>
+var a = ['hello', 'world'];
+$type(a.stdArray()); //Array<String>
 ```
 
 ### Safe api
