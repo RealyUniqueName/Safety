@@ -6,11 +6,12 @@ import haxe.macro.Expr;
 import haxe.io.Path;
 import safety.macro.SafetyPluginApi;
 import safety.macro.SafeAst;
-import safety.macro.PluginLoadingException;
 
 using haxe.io.Path;
 using sys.FileSystem;
 #end
+
+import haxe.Unsafe;
 
 class Safety {
 
@@ -70,34 +71,6 @@ class Safety {
 	static function _isSafe(ident:Dynamic):Void {}; //Handled in plugin
 
 #if macro
-	/**
-	 *  Enable null safety checking for specified dot-path.
-	 *  @param path - Dot-path of a package or a fully qualified type name.
-	 *  @param enableAdditionalFeatures - Enable all additional features on that `path`. You can enable each feature separately instead. See `Safety.safe*()` methods.
-	 */
-	static public function enable(path:String, enableAdditionalFeatures:Bool = true) {
-		if(enableAdditionalFeatures) {
-			SafeAst.addSafeApi(path, true);
-			SafeAst.addSafeNavigation(path, true);
-			SafeAst.addSafeArray(path, true);
-		}
-
-		if(isDisplay()) return;
-
-		#if (haxe_ver < '4.0.0')
-		Context.warning('Null safety is disabled: at least Haxe 4.0.0-preview.3 is required.', Context.currentPos());
-		return;
-		#end
-
-		try {
-			plugin.addPath(path);
-		} catch(e:PluginLoadingException) {
-			#if SAFETY_DEBUG
-			trace('Failed to load plugin: ${e.message}');
-			#end
-			Context.warning('Null safety is disabled: current build of Safety is not compatible with your build of Haxe compiler. You may want to rebuild Safety to enable null safety (see README.md).', Context.currentPos());
-		}
-	}
 
 	/**
 	 *  Add this call to hxml to make public methods in specified `path` to throw `NullPointerException`
@@ -148,45 +121,6 @@ class Safety {
 	 */
 	static public function safeArray(path:String, recursive:Bool = true) {
 		SafeAst.addSafeArray(path, recursive);
-	}
-
-	static public var plugin(get,never):SafetyPluginApi;
-	static var _plugin:SafetyPluginApi;
-	static function get_plugin():SafetyPluginApi {
-		#if (haxe_ver < '4.0.0')
-		throw new PluginLoadingException('Haxe >= 4.0.0 is required to load Safety plugin.');
-		#else
-		if(_plugin == null) {
-			try {
-				_plugin = eval.vm.Context.loadPlugin(getPluginPath());
-			} catch(e:Dynamic) {
-				throw new PluginLoadingException(Std.string(e));
-			}
-		}
-		#end
-		return _plugin;
-	}
-
-	static public function getPluginPath():String {
-		var srcDir = getCurrentPos().fileName.directory().directory();
-		var path = Path.join([srcDir, 'ml', 'safety_plugin.cmxs']); //development path
-		//if development binary does not exist, use pre built one
-		if(!path.exists()) {
-			path = Path.join([srcDir, 'bin', Sys.systemName(), 'safety_plugin.cmxs']);
-		}
-		return path;
-	}
-
-	static public function register() {
-		if(isDisplay()) return;
-		try {
-			plugin.run();
-		} catch(e:PluginLoadingException) {
-			//Ignore plugin loading errors at this point. Will handle them on `Safety.enable()`
-			#if SAFETY_DEBUG
-			trace('Failed to load plugin: ${e.message}');
-			#end
-		}
 	}
 
 	/**

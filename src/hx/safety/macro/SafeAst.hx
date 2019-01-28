@@ -179,14 +179,14 @@ class SafeAst {
 					transformed = true;
 					e = macro @:pos(e.pos) {
 						var _v_ = $target;
-						_v_ == null ? null : (_v_.$field:Unsafe<safety.macro.Monomorph<0>>)($a{args});
+						_v_ == null ? null : (_v_.$field:haxe.Unsafe<safety.macro.Monomorph<0>>)($a{args});
 					};
 					return e.map(transform);
 				case macro $target!.$field[$index]:
 					transformed = true;
 					e = macro @:pos(e.pos) {
 						var _v_ = $target;
-						_v_ == null ? null : (_v_.$field:Unsafe<safety.macro.Monomorph<0>>)[$index];
+						_v_ == null ? null : (_v_.$field:haxe.Unsafe<safety.macro.Monomorph<0>>)[$index];
 					};
 					return e.map(transform);
 				case macro $target!.$field:

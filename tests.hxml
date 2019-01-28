@@ -6,14 +6,9 @@
 -main Test
 -D analyzer-optimize
 
---macro Safety.enable('cases', false)
+--macro nullSafety('Safety')
+--macro nullSafety('cases')
+
 --macro Safety.safeArray('cases.TestSafeArray')
 --macro Safety.safeApi('cases.TestSafeApi')
 --macro Safety.safeNavigation('cases.TestSafeNavigation')
--D SAFETY_SILENT
-# -D SAFETY_DEBUG
-
---macro Validator.register()
-# -D VALIDATOR_DONT_FAIL
-
-extraParams.hxml

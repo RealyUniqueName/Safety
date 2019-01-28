@@ -1,6 +1,7 @@
 package cases;
 
 import utest.Assert;
+import haxe.Unsafe;
 
 using Safety;
 

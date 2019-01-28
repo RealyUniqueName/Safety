@@ -1,6 +1,7 @@
 package cases;
 
 import utest.Assert;
+import haxe.Unsafe;
 import safety.IllegalArgumentException;
 
 class TestSafeApi extends BaseCase {

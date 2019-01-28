@@ -19,7 +19,7 @@ abstract SafeArray<T>(Array<T>) from Array<T> {
 		if(index < 0 || index >= this.length) {
 			throw new OutOfBoundsException('Reading out of array bounds. Array length: ${this.length}. Accessed index: $index.');
 		}
-		return (this[index]:Unsafe<T>);
+		return this[index];
 	}
 
 	@:arrayAccess inline function set(index:Int, value:T):T {
