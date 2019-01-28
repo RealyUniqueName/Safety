@@ -41,7 +41,7 @@ class NullCheckBuilder {
 		switch(Context.getLocalType()) {
 			case TInst(_.toString() => 'safety.macro.ArgumentNullCheck', [type]):
 				switch(getNullability(type)) {
-					case Implicit | Explicit:
+					case Implicit:
 						var complexType = type.toComplexType();
 						if(complexType == null) {
 							complexType = macro:safety.macro.Monomorph<0>;

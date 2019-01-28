@@ -4,7 +4,6 @@ import haxe.macro.PositionTools;
 import haxe.macro.Context;
 import haxe.macro.Expr;
 import haxe.io.Path;
-import safety.macro.SafetyPluginApi;
 import safety.macro.SafeAst;
 
 using haxe.io.Path;

@@ -41,12 +41,12 @@ class TestSafeApi extends BaseCase {
 	}
 #end
 
-	static public function testPassingNull_toNullType_doesNotThrow() {
+	public function testPassingNull_toNullType_doesNotThrow() {
 		nullArg(null);
 		Assert.pass();
 	}
 
-	static public function testPassingNull_toOptionalArgument_doesNotThrow() {
+	public function testPassingNull_toOptionalArgument_doesNotThrow() {
 		optArg(null);
 		Assert.pass();
 	}
