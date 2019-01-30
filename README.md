@@ -23,8 +23,6 @@ Use following compiler arguments:
 * `--macro Safety.safeNavigation(dotPath, recursive)` - Enables [safe navigation operator](https://en.wikipedia.org/wiki/Safe_navigation_operator) `!.` in the specified path. If `recursive` is `true` (it is by default), then `!.` operator is also enabled for subpackages in `dotPath`.
 * `--macro Safety.safeArray(dotPath, recursive)` - Makes all array declarations to be typed as `SafeArray`. See [feature description](#safe-array) for details.
 * `--macro Safety.safeApi(dotPath, recursive)` - Adds runtime checking for not-nullable arguments of public methods in the specified path. If `null` is passed to such an argument, then `safety.IllegalArgumentException` is thrown. [Details](#safe-api)
-* `-D SAFETY_SILENT` - do not abort compilation on safety errors. You can handle safety errors manually at macro time in `Safety.plugin.onComplete(() -> trace(Safety.plugin.getErrors()))`
-* `-D SAFETY_DEBUG` - prints additional information during safety checking.
 
 All `--macro Safety.*` arguments can be used multiple times with different `dotPath` values.
 
