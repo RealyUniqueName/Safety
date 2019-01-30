@@ -6,8 +6,8 @@
 -main Test
 -D analyzer-optimize
 
---macro addGlobalMetadata('Safety', '@:safety')
---macro addGlobalMetadata('cases', '@:safety')
+--macro addGlobalMetadata('Safety', '@:nullSafety')
+--macro addGlobalMetadata('cases', '@:nullSafety')
 
 --macro Safety.safeArray('cases.TestSafeArray')
 --macro Safety.safeApi('cases.TestSafeApi')

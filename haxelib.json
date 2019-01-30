@@ -4,7 +4,7 @@
 	"license"      : "MIT",
 	"tags"         : ["null", "safety", "npe"],
 	"description"  : "Null safety for Haxe.",
-	"version"      : "0.1.4",
+	"version"      : "1.0.0",
 	"releasenote"  : "use built-in null safety of the Haxe compiler",
 	"classPath"    : "src",
 	"contributors" : ["RealyUniqueName"],
