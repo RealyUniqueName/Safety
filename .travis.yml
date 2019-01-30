@@ -24,5 +24,4 @@ script:
   - haxelib run travix cpp
   - haxelib run travix cs
   - haxelib run travix php
-  #Invalid lua setup on OSX. See https://github.com/back2dos/travix/issues/78
-  - if [ `uname` = "Linux" ]; then haxelib run travix lua; fi
+  - haxelib run travix lua
