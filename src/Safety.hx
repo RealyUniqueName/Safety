@@ -1,13 +1,6 @@
 #if macro
-import haxe.PosInfos;
-import haxe.macro.PositionTools;
 import haxe.macro.Context;
-import haxe.macro.Expr;
-import haxe.io.Path;
 import safety.macro.SafeAst;
-
-using haxe.io.Path;
-using sys.FileSystem;
 #end
 
 import haxe.Unsafe;
@@ -59,15 +52,6 @@ class Safety {
 		if(value != null) callback((value:Unsafe<T>));
 		return value;
 	}
-
-	/**
-	 *  Prints `true` at compile time if provided expression can not be evaluated to `null` at run time. Prints `false` otherwise.
-	 *  Always prints `false` if invoked outside of a path passed to `Safety.enable()`
-	 */
-	macro static public function isSafe(expr:Expr):ExprOf<Void> {
-		return macro @:pos(expr.pos) @:privateAccess Safety._isSafe($expr);
-	}
-	static function _isSafe(ident:Dynamic):Void {}; //Handled in plugin
 
 #if macro
 
@@ -131,10 +115,6 @@ class Safety {
 			return true;
 		#end
 		return Context.defined('display');
-	}
-
-	static function getCurrentPos(?pos:PosInfos):PosInfos {
-		return pos;
 	}
 #end
 }
