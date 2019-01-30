@@ -5,8 +5,8 @@
 	"tags"         : ["null", "safety", "npe"],
 	"description"  : "Null safety for Haxe.",
 	"version"      : "0.1.4",
-	"releasenote"  : "@:safety(unsafe) meta to exclude classes/fields from null safety",
-	"classPath"    : "src/hx",
+	"releasenote"  : "use built-in null safety of the Haxe compiler",
+	"classPath"    : "src",
 	"contributors" : ["RealyUniqueName"],
 	"dependencies" : {
 		"exception": ""

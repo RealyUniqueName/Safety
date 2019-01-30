@@ -1,4 +1,4 @@
--cp src/hx
+-cp src/
 -cp test
 -lib utest
 -lib exception
