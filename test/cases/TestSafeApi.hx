@@ -1,7 +1,6 @@
 package cases;
 
 import utest.Assert;
-import haxe.Unsafe;
 import safety.IllegalArgumentException;
 
 class TestSafeApi extends BaseCase {
@@ -14,20 +13,20 @@ class TestSafeApi extends BaseCase {
 
 	public function testPassingNullToNotNullableArg_throwsNullPointerException() {
 		Assert.raises(
-			function() strArg((null:Unsafe<String>)),
+			function() strArg(cast null),
 			IllegalArgumentException
 		);
 	}
 
 #if !(cross || flash || cpp || cs || hl || java)
-	static public function testPassingNull_toBasicType_throwsNullPointerException() {
+	public function testPassingNull_toBasicType_throwsNullPointerException() {
 		Assert.raises(
-			function() intArg((null:Unsafe<Int>)),
+			function() intArg(cast null),
 			IllegalArgumentException
 		);
 	}
 
-	static public function testPassingNull_toOptionalArgumentWithoutType_doesNotThrow() {
+	public function testPassingNull_toOptionalArgumentWithoutType_doesNotThrow() {
 		optNoTypeArg(null);
 		Assert.pass();
 	}
@@ -35,7 +34,7 @@ class TestSafeApi extends BaseCase {
 	//this test is under `#if !static` because `noTypeArg()` has Int argument, and `null` is not allowed for `Int` on static targets.
 	public function testPassingNullToNoTypeArg_throwsNullPointerException() {
 		Assert.raises(
-			function() noTypeArg((null:Unsafe<Dynamic>)),
+			function() noTypeArg(cast null),
 			IllegalArgumentException
 		);
 	}

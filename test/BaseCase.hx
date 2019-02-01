@@ -1,3 +1,2 @@
-class BaseCase {
-	public function new() {}
+class BaseCase extends utest.Test {
 }
