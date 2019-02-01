@@ -55,6 +55,11 @@ static public inline function sure<T>(value:Null<T>):T;
 */
 static public inline function unsafe<T>(value:Null<T>):T;
 /**
+*  Returns `true` if value is not null and `callback(value)` is evaluated to `true`.
+*  Returns `false` otherwise.
+*/
+static public inline function check<T>(value:Null<T>, callback:T->Bool):Bool
+/**
 *  Applies `callback` to `value` and returns the result if `value` is not `null`.
 *  Returns `null` otherwise.
 */
