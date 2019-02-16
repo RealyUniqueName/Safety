@@ -8,7 +8,6 @@ class Safety {
 	/**
 	 *  Returns `value` if it is not `null`. Otherwise returns `defaultValue`.
 	 */
-	@:generic
 	static public inline function or<T>(value:Null<T>, defaultValue:T):T {
 		return value == null ? defaultValue : @:nullSafety(false) (value:T);
 	}
@@ -16,7 +15,6 @@ class Safety {
 	/**
 	 *  Returns `value` if it is not `null`. Otherwise returns `defaultValue`.
 	 */
-	@:generic
 	static public inline function orGet<T>(value:Null<T>, getter:Void->T):T {
 		return value == null ? getter() : @:nullSafety(false) (value:T);
 	}
@@ -25,7 +23,6 @@ class Safety {
 	 *  Returns `value` if it is not `null`. Otherwise throws an exception.
 	 *  @throws NullPointerException if `value` is `null`.
 	 */
-	@:generic
 	static public inline function sure<T>(value:Null<T>):T {
 		return value == null ? throw new safety.NullPointerException('Null pointer in .sure() call') : @:nullSafety(false) (value:T);
 	}
@@ -33,7 +30,6 @@ class Safety {
 	/**
 	 *  Just returns `value` without any checks, but typed as not-nullable. Use at your own risk.
 	 */
-	@:generic
 	static public inline function unsafe<T>(value:Null<T>):T {
 		return @:nullSafety(false) (value:T);
 	}
@@ -42,7 +38,6 @@ class Safety {
 	 *  Returns `true` if value is not null and `callback(value)` is evaluated to `true`.
 	 *  Returns `false` otherwise.
 	 */
-	@:generic
 	static public inline function check<T>(value:Null<T>, callback:T->Bool):Bool {
 		return value != null && callback(@:nullSafety(false) (value:T));
 	}
@@ -51,7 +46,6 @@ class Safety {
 	 *  Applies `callback` to `value` and returns the result if `value` is not `null`.
 	 *  Returns `null` otherwise.
 	 */
-	@:generic
 	static public inline function let<T,V>(value:Null<T>, callback:T->V):Null<V> {
 		return value == null ? null : callback(@:nullSafety(false) (value:T));
 	}
@@ -59,7 +53,6 @@ class Safety {
 	/**
 	 *  Passes `value` to `callback` if `value` is not null.
 	 */
-	@:generic
 	static public inline function run<T>(value:Null<T>, callback:T->Void) {
 		if(value != null) callback(@:nullSafety(false) (value:T));
 	}
@@ -68,7 +61,6 @@ class Safety {
 	 *  Applies `callback` to `value` if `value` is not `null`.
 	 *  Returns `value`.
 	 */
-	@:generic
 	static public inline function apply<T>(value:Null<T>, callback:T->Void):Null<T> {
 		switch(value) {
 			case null:

@@ -24,4 +24,5 @@ script:
   - haxelib run travix cpp
   - haxelib run travix cs
   - haxelib run travix php
-  - haxelib run travix lua
+  # because of "bin/lua/tests.lua:58: module 'lua-utf8' not found"
+  # - haxelib run travix lua
