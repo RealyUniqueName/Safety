@@ -21,6 +21,18 @@ class TestSafetyExtensions extends BaseCase {
 		}
 	}
 
+	@:keep
+	public function testOrGet() {
+		var s:Null<String> = null;
+		Assert.equals('hello', s.orGet(() -> 'hello'));
+		s = 'world';
+		Assert.equals('world', s.orGet(() -> 'hello'));
+		dummyCall(() -> s = null);
+		if(s != null) {
+			var n:String = s.orGet(() -> 'fd');
+		}
+	}
+
 	public function testSure() {
 		var s:Null<String> = null;
 		Assert.raises(function() s.sure(), safety.NullPointerException);

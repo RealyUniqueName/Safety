@@ -5,6 +5,7 @@
 -debug
 -main Test
 -D analyzer-optimize
+-dce full
 
 --macro nullSafety('Safety')
 --macro nullSafety('cases')
