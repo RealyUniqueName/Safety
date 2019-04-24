@@ -4,8 +4,8 @@
 	"license"      : "MIT",
 	"tags"         : ["null", "safety", "npe"],
 	"description"  : "Null safety for Haxe.",
-	"version"      : "1.1.0",
-	"releasenote"  : "added `Safety.orGet(value:Null<T>, getter:Void->T):T`",
+	"version"      : "1.1.1",
+	"releasenote"  : "Updated to the latest changes in Haxe 4",
 	"classPath"    : "src",
 	"contributors" : ["RealyUniqueName"],
 	"dependencies" : {
