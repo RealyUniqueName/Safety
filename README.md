@@ -46,6 +46,10 @@ Available extensions:
 */
 static public inline function or<T>(value:Null<T>, defaultValue:T):T;
 /**
+*  Returns `value` if it is not `null`.  calls `getter` and returns the result.
+*/
+static public inline function orGet<T>(value:Null<T>, getter:Void->T):T;
+/**
 *  Returns `value` if it is not `null`. Otherwise throws an exception.
 *  @throws safety.NullPointerException if `value` is `null`.
 */

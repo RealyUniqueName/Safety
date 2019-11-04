@@ -13,7 +13,7 @@ class Safety {
 	}
 
 	/**
-	 *  Returns `value` if it is not `null`. Otherwise returns `defaultValue`.
+	 *  Returns `value` if it is not `null`. Otherwise calls `getter` and returns the result.
 	 */
 	static public inline function orGet<T>(value:Null<T>, getter:Void->T):T {
 		return value == null ? getter() : @:nullSafety(Off) (value:T);
