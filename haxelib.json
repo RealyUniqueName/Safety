@@ -8,7 +8,5 @@
 	"releasenote"  : "Updated to the latest changes in Haxe 4",
 	"classPath"    : "src",
 	"contributors" : ["RealyUniqueName"],
-	"dependencies" : {
-		"exception": ""
-	}
+	"dependencies" : {}
 }
