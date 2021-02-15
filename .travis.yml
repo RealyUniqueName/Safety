@@ -17,12 +17,12 @@ install:
 script:
   - haxe tests.hxml
   - haxelib run travix interp
-  - haxelib run travix neko
-  - haxelib run travix python
-  - haxelib run travix node
-  - haxelib run travix java
-  - haxelib run travix cpp
-  - haxelib run travix cs
-  - haxelib run travix php
+  # - haxelib run travix neko
+  # - haxelib run travix python
+  # - haxelib run travix node
+  # - haxelib run travix java
+  # - haxelib run travix cpp
+  # - haxelib run travix cs
+  # - haxelib run travix php
   # because of "bin/lua/tests.lua:58: module 'lua-utf8' not found"
   # - haxelib run travix lua
