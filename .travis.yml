@@ -8,7 +8,7 @@ os:
   - osx
 
 haxe:
-  - development
+  - "fix-macos-10.13"
 
 install:
   - haxelib install travix
