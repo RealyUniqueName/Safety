@@ -10,7 +10,7 @@ haxe:
   - 4.1.5
 
 script:
-  - curl -sSL https://build.haxe.org/builds/haxe/mac/haxe_2021-02-19_fix-macos-10.13_d8ab35d.tar.gz -o haxe.tar.gz
+  - curl -sSL https://build.haxe.org/builds/haxe/mac/haxe_2021-02-19_fix-macos-10.13_496d2c2.tar.gz -o haxe.tar.gz
   - tar -xf haxe.tar.gz
-  - cd haxe_20210219120636_d8ab35d
+  - cd haxe_20210219155244_496d2c2
   - ./haxe -x Test
