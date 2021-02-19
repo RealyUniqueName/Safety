@@ -7,7 +7,7 @@ os:
   - osx
 
 haxe:
-  - development
+  - 4.1.5
 
 script:
   - curl -sSL https://build.haxe.org/builds/haxe/mac/haxe_2021-02-18_fix-macos-10.13_96a0318.tar.gz -o haxe.tar.gz
