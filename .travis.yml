@@ -4,25 +4,13 @@ dist: trusty
 language: haxe
 
 os:
-  - linux
   - osx
 
 haxe:
-  - fix-macos-10.13
-
-install:
-  - haxelib install travix
-  - haxelib run travix install
+  - development
 
 script:
-  - haxe tests.hxml
-  - haxelib run travix interp
-  # - haxelib run travix neko
-  # - haxelib run travix python
-  # - haxelib run travix node
-  # - haxelib run travix java
-  # - haxelib run travix cpp
-  # - haxelib run travix cs
-  # - haxelib run travix php
-  # because of "bin/lua/tests.lua:58: module 'lua-utf8' not found"
-  # - haxelib run travix lua
+  - curl -sSL https://build.haxe.org/builds/haxe/mac/haxe_2021-02-18_fix-macos-10.13_96a0318.tar.gz -o haxe.tar.gz
+  - tar -xf haxe.tar.gz 
+  - cd haxe_20210218195013_96a0318
+  - ./haxe -x Test
