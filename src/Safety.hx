@@ -127,9 +127,6 @@ class Safety {
 	 */
 	@:allow(safety)
 	static function isDisplay():Bool {
-		#if display
-			return true;
-		#end
 		return Context.defined('display');
 	}
 #end
